@@ -9,6 +9,7 @@ import Ledger from './pages/Ledger';
 import ChartsPage from './pages/ChartsPage';
 import Settings from './pages/Settings';
 import Backup from './pages/Backup';
+import Cloud from './pages/Cloud';
 import ReadingForm from './forms/ReadingForm';
 import PaymentForm from './forms/PaymentForm';
 import AdjustmentForm from './forms/AdjustmentForm';
@@ -22,8 +23,9 @@ const PAGES = {
   charts: ['الرسوم', ChartsPage],
   settings: ['الإعدادات', Settings],
   backup: ['النسخ الاحتياطي', Backup],
+  cloud: ['السحابة', Cloud],
 };
-const MORE = ['compare', 'ledger', 'charts', 'settings', 'backup'];
+const MORE = ['compare', 'ledger', 'charts', 'cloud', 'settings', 'backup'];
 
 const PATHS = {
   home: 'M3 11l9-8 9 8M5 9.5V20h14V9.5',
@@ -36,6 +38,7 @@ const PATHS = {
   settings: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4',
   backup: 'M12 4v11M7.5 11L12 15.5 16.5 11M5 20h14',
   plus: 'M12 5v14M5 12h14',
+  cloud: 'M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.3 4.4 4.4 0 0 0 7 18z',
 };
 
 function Icon({ name }) {
@@ -62,7 +65,7 @@ function useHashPage() {
 
 function Shell() {
   const page = useHashPage();
-  const { settings, modal, closeModal, openModal, confirmSt, closeConfirm, toast } = useApp();
+  const { settings, modal, closeModal, openModal, confirmSt, closeConfirm, toast, cloud } = useApp();
   const [sheet, setSheet] = useState(null); // 'more' | 'add' | null
   const Page = PAGES[page][1];
 
@@ -85,6 +88,11 @@ function Shell() {
           <span className="brand-mark" aria-hidden="true">⚡</span>
           <div><strong>مراقب استهلاك الكهرباء</strong><small>{settings.meterName}</small></div>
           {inMore && <span className="where">{PAGES[page][0]}</span>}
+          {cloud.phase !== 'nocfg' && (
+            <a href="#/cloud" className={`cloud-chip ${cloud.phase}`} aria-label="حالة السحابة">
+              ☁ {{ signedout: 'غير متصل بحساب', syncing: 'يزامن…', synced: 'متزامن', offline: 'بلا اتصال', error: 'خطأ' }[cloud.phase]}
+            </a>
+          )}
         </div>
         <nav className="nav" aria-label="التنقل الرئيسي">
           {Object.keys(PAGES).map((k) => (

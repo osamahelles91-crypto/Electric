@@ -273,3 +273,23 @@ input, select { min-height: 40px; }
   .topbar { padding-bottom: 0; }
   .toast { bottom: 24px; }
 }
+
+/* ---------- السحابة ---------- */
+.cloud-chip { text-decoration: none; background: var(--plate2); color: #c5d2de; border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; white-space: nowrap; margin-inline-start: auto; }
+.where + .cloud-chip { margin-inline-start: 6px; }
+.cloud-chip.synced { color: #7fe0d4; }
+.cloud-chip.syncing { color: var(--amber); }
+.cloud-chip.error { color: #ff9b8a; }
+.steps { padding-inline-start: 20px; margin: 8px 0 12px; }
+.steps li { margin-bottom: 6px; }
+textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; background: #fff; font: inherit; font-size: 0.85rem; }
+.panel-sub { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+.panel-sub summary { cursor: pointer; font-weight: 600; }
+.panel-sub pre { background: #0f1a24; color: #d7e3ee; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.78rem; text-align: left; }
+.sync-state { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.sync-state b { font-size: 1.1rem; }
+.sync-state.synced b { color: var(--teal); }
+.sync-state.error b { color: var(--brick); }
+.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 6px; }
+.kv dt { color: var(--muted); font-size: 0.8rem; }
+.kv dd { margin: 0; font-weight: 600; }

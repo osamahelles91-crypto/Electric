@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import * as db from './db';
+import * as sync from './cloud/sync';
 import { computeRows, totalsOf, buildLedger, balanceOf, sumPayments, sumLoss, sumNet, unpaidConsumption, sumAdjustments, fmtFixed, fmtDate, todayStr } from './calc';
 
 const Ctx = createContext(null);
@@ -11,6 +12,7 @@ export function AppProvider({ children }) {
   const [confirmSt, setConfirmSt] = useState(null);
   const [toast, setToast] = useState(null);
   const [fatal, setFatal] = useState(null);
+  const [cloud, setCloud] = useState(sync.state);
 
   const reload = useCallback(async () => {
     const [readings, payments, adjustments, settings] = await Promise.all([
@@ -25,6 +27,13 @@ export function AppProvider({ children }) {
   useEffect(() => {
     reload().catch((e) => setFatal(e?.message || String(e)));
     try { navigator.storage?.persist?.(); } catch { /* ignore */ }
+  }, [reload]);
+
+  useEffect(() => {
+    sync.init();
+    const u1 = sync.subscribe(setCloud);
+    const u2 = sync.onRemoteApplied(() => reload().catch(() => {}));
+    return () => { u1(); u2(); };
   }, [reload]);
 
   useEffect(() => {
@@ -90,6 +99,7 @@ export function AppProvider({ children }) {
         setConfirmSt(null);
       },
       toast,
+      cloud,
       saveReading: upsert('readings', 'القراءة'),
       deleteReading: remove('readings', 'القراءة'),
       savePayment: upsert('payments', 'الدفعة'),
@@ -100,7 +110,7 @@ export function AppProvider({ children }) {
       restoreAll: (data) => run(() => db.replaceAll(data), 'تمت استعادة البيانات'),
       addOpening: (rec) => run(() => db.addRec('readings', rec), 'تم تسجيل القراءة الافتتاحية'),
     };
-  }, [state, derived, modal, confirmSt, toast, run, notify]);
+  }, [state, derived, modal, confirmSt, toast, cloud, run, notify]);
 
   if (fatal) {
     return (

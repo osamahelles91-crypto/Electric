@@ -90,6 +90,32 @@ describe('الاختبارات الإلزامية', () => {
   });
 });
 
+describe('المزامنة المحلية (الصندوق الصادر)', () => {
+  it('كل تعديل محلي يُسجَّل، والتعديل البعيد الأحدث فقط يُطبَّق', async () => {
+    await db.replaceAll({ settings: db.DEFAULT_SETTINGS, readings: [], payments: [], adjustments: [] });
+    const pid = await db.addRec('payments', { date: '2026-01-01', amount: '5', method: 'x', notes: '' });
+    expect(pid).toBeGreaterThan(1e12);
+    expect((await db.getOutbox()).some((e) => e.key === `payments/${pid}` && e.op === 'put')).toBe(true);
+    const p = (await db.getAll('payments')).find((x) => x.id === pid);
+    expect(await db.applyRemote({ store: 'payments', id: pid, deleted: false, data: { ...p, amount: '9' }, updatedAt: p.updatedAt - 1 })).toBe(false);
+    expect((await db.getAll('payments')).find((x) => x.id === pid).amount).toBe('5');
+    expect(await db.applyRemote({ store: 'payments', id: pid, deleted: false, data: { ...p, amount: '9' }, updatedAt: p.updatedAt + 10 })).toBe(true);
+    expect((await db.getAll('payments')).find((x) => x.id === pid).amount).toBe('9');
+    expect((await db.getOutbox()).some((e) => e.key === `payments/${pid}`)).toBe(false);
+    expect(await db.applyRemote({ store: 'payments', id: pid, deleted: true, data: null, updatedAt: p.updatedAt + 20 })).toBe(true);
+    expect((await db.getAll('payments')).some((x) => x.id === pid)).toBe(false);
+  });
+
+  it('الحذف المحلي يُسجَّل ولا يُلغيه تعديل بعيد أقدم', async () => {
+    const pid = await db.addRec('payments', { date: '2026-01-02', amount: '7', method: 'x', notes: '' });
+    const p = (await db.getAll('payments')).find((x) => x.id === pid);
+    await db.delRec('payments', pid);
+    expect((await db.getOutbox()).find((e) => e.key === `payments/${pid}`).op).toBe('del');
+    expect(await db.applyRemote({ store: 'payments', id: pid, deleted: false, data: p, updatedAt: p.updatedAt })).toBe(false);
+    expect((await db.getAll('payments')).some((x) => x.id === pid)).toBe(false);
+  });
+});
+
 describe('حالات إضافية', () => {
   beforeEach(() => { id = 0; });
 

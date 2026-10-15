@@ -4,7 +4,9 @@ import { sortReadings } from '../calc';
 
 export default function Payments() {
   const { payments, totals, adjTotal, paid, loss, balance, fd, openModal, deletePayment, ask } = useApp();
-  const list = [...payments].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id));
+  const asc = [...payments].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.createdAt || 0) - (b.createdAt || 0)));
+  const numOf = new Map(asc.map((p, i) => [p.id, i + 1]));
+  const list = [...asc].reverse();
   const due = totals.cost.plus(adjTotal);
   const credit = balance.lt(0);
 
@@ -40,7 +42,7 @@ export default function Payments() {
             <tbody>
               {list.map((p) => (
                 <tr key={p.id}>
-                  <td className="num">{p.id}</td>
+                  <td className="num">{numOf.get(p.id)}</td>
                   <td className="num">{fd(p.date)}</td>
                   <td><Money v={p.amount} /></td>
                   <td>{p.loss && p.loss !== '0' ? <Money v={p.loss} /> : '—'}</td>

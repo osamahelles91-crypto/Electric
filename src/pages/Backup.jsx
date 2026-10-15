@@ -21,7 +21,7 @@ export default function Backup() {
       )
     );
   const exportPayments = () =>
-    download('المدفوعات.csv', toCSV(['رقم العملية', 'التاريخ', 'المبلغ', 'الفاقد', 'طريقة الدفع', 'الملاحظات'], payments.map((p) => [p.id, p.date, p.amount, p.loss || '0', p.method, p.notes])));
+    download('المدفوعات.csv', toCSV(['رقم العملية', 'التاريخ', 'المبلغ', 'الفاقد', 'طريقة الدفع', 'الملاحظات'], [...payments].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.createdAt || 0) - (b.createdAt || 0))).map((p, i) => [i + 1, p.date, p.amount, p.loss || '0', p.method, p.notes])));
   const exportAll = () =>
     download(`نسخة-احتياطية-كهرباء-${todayStr()}.json`, JSON.stringify(buildBackup({ settings, readings, payments, adjustments }), null, 2), 'application/json');
 
@@ -57,7 +57,7 @@ export default function Backup() {
       <div className="page-head"><h1>النسخ الاحتياطي</h1></div>
       <section className="panel">
         <h3>أين تُحفظ بياناتي؟</h3>
-        <p>تُحفظ البيانات بشكل دائم داخل هذا المتصفح على هذا الجهاز فقط (قاعدة IndexedDB). لا توجد مزامنة سحابية بين الأجهزة. لنقل البيانات إلى جهاز آخر أو لحمايتها من مسح بيانات المتصفح، صدّر نسخة كاملة واستعدها على الجهاز الآخر.</p>
+        <p>تُحفظ البيانات بشكل دائم على هذا الجهاز (قاعدة IndexedDB). لفتحها من أكثر من جهاز فعّل المزامنة من صفحة «السحابة». وفي كل الأحوال يُنصح بتصدير نسخة كاملة بين وقت وآخر.</p>
       </section>
       <section className="panel">
         <h3>التصدير</h3>

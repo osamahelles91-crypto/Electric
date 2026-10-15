@@ -1,0 +1,218 @@
+import { initializeApp } from 'firebase/app';
+import {
+  getAuth,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut as fbSignOut,
+} from 'firebase/auth';
+import { initializeFirestore, collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
+import * as db from '../db';
+import { BUILTIN_CONFIG } from './builtin';
+
+const CFG_KEY = 'em-cloud-config';
+
+/** phase: nocfg | signedout | syncing | synced | offline | error */
+export const state = { phase: 'nocfg', email: '', lastSync: null, pending: 0, error: '' };
+const subs = new Set();
+const remoteCbs = new Set();
+const snap = () => ({ ...state });
+const emit = () => subs.forEach((cb) => cb(snap()));
+export const subscribe = (cb) => {
+  subs.add(cb);
+  return () => subs.delete(cb);
+};
+export const onRemoteApplied = (cb) => {
+  remoteCbs.add(cb);
+  return () => remoteCbs.delete(cb);
+};
+
+/** يقبل JSON أو كود JavaScript الذي يعرضه Firebase (const firebaseConfig = {...}) */
+export function parseConfig(text) {
+  const cfg = {};
+  const re = /["']?(\w+)["']?\s*:\s*["']([^"']+)["']/g;
+  let m;
+  while ((m = re.exec(text || ''))) cfg[m[1]] = m[2];
+  if (!cfg.apiKey || !cfg.projectId || !cfg.appId) return null;
+  return cfg;
+}
+export function loadConfig() {
+  try {
+    const s = localStorage.getItem(CFG_KEY);
+    if (s) return JSON.parse(s);
+  } catch { /* ignore */ }
+  return BUILTIN_CONFIG;
+}
+export const saveConfig = (cfg) => localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+export const clearConfig = () => localStorage.removeItem(CFG_KEY);
+
+export function arabicError(e) {
+  const c = e?.code || '';
+  const map = {
+    'auth/invalid-credential': 'البريد أو كلمة المرور غير صحيحة.',
+    'auth/wrong-password': 'كلمة المرور غير صحيحة.',
+    'auth/user-not-found': 'لا يوجد حساب بهذا البريد. أنشئ حسابًا أولًا.',
+    'auth/email-already-in-use': 'هذا البريد مسجَّل مسبقًا. استخدم «تسجيل الدخول».',
+    'auth/weak-password': 'كلمة المرور ضعيفة: يجب ألا تقل عن 6 أحرف.',
+    'auth/invalid-email': 'صيغة البريد غير صحيحة.',
+    'auth/network-request-failed': 'تعذّر الاتصال بالإنترنت.',
+    'auth/too-many-requests': 'محاولات كثيرة. انتظر قليلًا ثم أعد المحاولة.',
+    'auth/operation-not-allowed': 'لم تُفعَّل طريقة «البريد وكلمة المرور» في Firebase Authentication.',
+    'auth/invalid-api-key': 'مفتاح API غير صحيح. راجع إعداد Firebase.',
+    'permission-denied': 'رفضت قواعد Firestore الوصول. انسخ القواعد الموضحة في صفحة السحابة.',
+    unavailable: 'الخدمة غير متاحة الآن (تحقق من الإنترنت).',
+    'failed-precondition': 'لم تُنشأ قاعدة Firestore بعد في مشروعك.',
+  };
+  return map[c] || `${c || 'خطأ'}: ${e?.message || e}`;
+}
+
+let inited = false;
+let auth = null;
+let fs = null;
+let col = null;
+let unsub = null;
+let flushTimer = null;
+let flushing = false;
+let firstSnapshot = false;
+
+const online = () => (typeof navigator === 'undefined' ? true : navigator.onLine);
+
+async function refreshPending() {
+  try { state.pending = (await db.getOutbox()).length; } catch { /* ignore */ }
+}
+
+function settle() {
+  if (state.phase === 'error' || state.phase === 'signedout' || state.phase === 'nocfg') return;
+  state.phase = !online() ? 'offline' : state.pending ? 'syncing' : 'synced';
+}
+
+export function scheduleFlush(ms = 500) {
+  if (!col) return;
+  clearTimeout(flushTimer);
+  flushTimer = setTimeout(flush, ms);
+}
+
+async function flush() {
+  if (!col || !firstSnapshot || flushing) return;
+  if (!online()) {
+    await refreshPending();
+    settle();
+    emit();
+    return;
+  }
+  flushing = true;
+  try {
+    const list = await db.getOutbox();
+    for (const e of list) {
+      const payload = await db.buildPayload(e);
+      await setDoc(doc(col, `${e.store}-${e.id}`), payload);
+      await db.clearOutbox(e.key, e.updatedAt);
+    }
+    state.error = '';
+    if (state.phase === 'error') state.phase = 'syncing';
+    state.lastSync = Date.now();
+  } catch (err) {
+    state.phase = 'error';
+    state.error = arabicError(err);
+  } finally {
+    flushing = false;
+    await refreshPending();
+    settle();
+    emit();
+  }
+}
+
+function stop() {
+  if (unsub) unsub();
+  unsub = null;
+  col = null;
+  firstSnapshot = false;
+  clearTimeout(flushTimer);
+}
+
+async function start(uid) {
+  stop();
+  state.phase = 'syncing';
+  state.error = '';
+  emit();
+  col = collection(fs, 'users', uid, 'records');
+  const seeded = `em-cloud-seeded-${uid}`;
+  try {
+    if (!localStorage.getItem(seeded)) {
+      await db.enqueueAllLocal();
+      localStorage.setItem(seeded, '1');
+    }
+  } catch { /* ignore */ }
+  unsub = onSnapshot(
+    col,
+    async (s) => {
+      let changed = false;
+      for (const ch of s.docChanges()) {
+        if (ch.type === 'removed') continue;
+        const d = ch.doc.data();
+        if (!d?.store) continue;
+        try {
+          if (await db.applyRemote({ store: d.store, id: d.id, deleted: !!d.deleted, data: d.data, updatedAt: d.updatedAt || 0 })) changed = true;
+        } catch { /* ignore one bad record */ }
+      }
+      if (changed) remoteCbs.forEach((cb) => cb());
+      firstSnapshot = true;
+      state.lastSync = Date.now();
+      if (state.phase === 'error' && !flushing) state.error = '';
+      await refreshPending();
+      if (state.phase === 'error') state.phase = 'syncing';
+      settle();
+      emit();
+      scheduleFlush(0);
+    },
+    (err) => {
+      state.phase = 'error';
+      state.error = arabicError(err);
+      emit();
+    }
+  );
+}
+
+export function init() {
+  if (inited) return;
+  inited = true;
+  const cfg = loadConfig();
+  if (!cfg?.apiKey || !cfg?.projectId || !cfg?.appId) {
+    state.phase = 'nocfg';
+    emit();
+    return;
+  }
+  try {
+    const app = initializeApp(cfg);
+    auth = getAuth(app);
+    fs = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+  } catch (e) {
+    state.phase = 'error';
+    state.error = arabicError(e);
+    emit();
+    return;
+  }
+  state.phase = 'signedout';
+  emit();
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      state.email = user.email || '';
+      start(user.uid);
+    } else {
+      stop();
+      state.email = '';
+      state.phase = 'signedout';
+      emit();
+    }
+  });
+  db.onLocalChange(() => scheduleFlush(600));
+  window.addEventListener('online', () => { scheduleFlush(0); settle(); emit(); });
+  window.addEventListener('offline', () => { settle(); emit(); });
+}
+
+export const signUp = (email, pw) => createUserWithEmailAndPassword(auth, email, pw);
+export const signIn = (email, pw) => signInWithEmailAndPassword(auth, email, pw);
+export const signOutNow = () => fbSignOut(auth);
+export function syncNow() {
+  scheduleFlush(0);
+}
