@@ -1,6 +1,15 @@
 apply plugin: 'com.android.application'
 
 android {
+    signingConfigs {
+        debug {
+            // مفتاح ثابت ليُثبَّت كل إصدار جديد فوق السابق دون إلغاء التثبيت
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
     namespace = "com.gbr.electricitymonitor"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
