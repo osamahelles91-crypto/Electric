@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { AppProvider, useApp } from './ctx';
 import { Modal } from './ui';
 import Dashboard from './pages/Dashboard';
@@ -88,6 +89,25 @@ function Shell() {
   const Page = PAGES[page][1];
 
   useEffect(() => { window.scrollTo(0, 0); setSheet(null); }, [page]);
+
+  // زر الرجوع في أندرويد: يغلق النافذة/القائمة المفتوحة، ثم يعود للرئيسية، ثم يخرج من التطبيق
+  const back = useRef(null);
+  back.current = () => {
+    if (confirmSt) return closeConfirm(false);
+    if (bell) return setBell(false);
+    if (modal) return closeModal();
+    if (sheet) return setSheet(null);
+    if (page !== 'home') { window.location.hash = '#/home'; return; }
+    import('@capacitor/app').then(({ App: CapApp }) => CapApp.exitApp());
+  };
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return undefined;
+    let h;
+    import('@capacitor/app').then(({ App: CapApp }) => {
+      CapApp.addListener('backButton', () => back.current()).then((x) => { h = x; });
+    });
+    return () => { h?.remove(); };
+  }, []);
 
   const go = (k) => { window.location.hash = `#/${k}`; setSheet(null); };
   const add = (type) => { setSheet(null); openModal(type); };
