@@ -182,3 +182,11 @@ td.acts { white-space: nowrap; text-align: end; }
 .icon-act { border: 0; background: transparent; cursor: pointer; width: 40px; height: 40px; font-size: 1.1rem; border-radius: 6px; }
 .icon-act:hover { background: #e3eaf0; }
 .icon-act.del { color: var(--brick); }
+
+/* ---------- إحصاءات المربع العلوي ---------- */
+.hero-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #3a4f61; border: 1px solid #3a4f61; border-radius: 6px; overflow: hidden; width: 100%; order: 3; }
+.hero-stats > div { background: var(--plate2); padding: 12px 14px; display: flex; flex-direction: column; }
+.hero-stats span { color: #9fb2c3; font-size: 0.85rem; }
+.hero-stats b { font-size: 1.3rem; color: #fff; }
+.hero-stats small { color: #9fb2c3; font-size: 0.8rem; }
+.hero-actions { order: 4; }

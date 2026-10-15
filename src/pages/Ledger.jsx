@@ -10,7 +10,10 @@ export default function Ledger() {
     if (e.type === 'consumption') {
       return <>استهلاك <Qty v={e.ref.consumption} /> × <span className="num">{e.ref.price}</span> ({e.ref.days} يوم)</>;
     }
-    if (e.type === 'payment') return `${e.ref.method}${e.ref.notes ? ' - ' + e.ref.notes : ''}`;
+    if (e.type === 'payment') {
+      const hasLoss = e.ref.loss && e.ref.loss !== '0';
+      return `${e.ref.method}${hasLoss ? ` (إجمالي ${e.ref.amount}، منه فاقد ${e.ref.loss} لا يخفّض المستحق)` : ''}${e.ref.notes ? ' - ' + e.ref.notes : ''}`;
+    }
     return e.ref.description;
   };
 

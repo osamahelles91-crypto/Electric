@@ -167,11 +167,34 @@ export function totalsOf(rows) {
 }
 
 export const sumPayments = (payments) => payments.reduce((a, p) => a.plus(D(p.amount)), D(0));
+/** الفاقد: مبلغ يُدفع ضمن الدفعة لكنه لا يُحسب من الاستهلاك ولا يخفّض المستحق */
+export const lossOf = (p) => D(p.loss || 0);
+export const netOf = (p) => D(p.amount).minus(lossOf(p));
+export const sumLoss = (payments) => payments.reduce((a, p) => a.plus(lossOf(p)), D(0));
+export const sumNet = (payments) => payments.reduce((a, p) => a.plus(netOf(p)), D(0));
+
+/** الاستهلاك غير المسدَّد: تُوزَّع الدفعات (صافي الفاقد) على الفترات من الأقدم، وبسعر كل فترة */
+export function unpaidConsumption(rows, netPaid) {
+  let left = D(netPaid);
+  let unpaid = D(0);
+  rows.forEach((r) => {
+    if (r.isOpening || r.consumption.isZero()) return;
+    if (r.cost.lte(0)) return;
+    if (left.gte(r.cost)) {
+      left = left.minus(r.cost);
+    } else {
+      const paidFrac = left.lt(0) ? D(0) : left.div(r.cost);
+      unpaid = unpaid.plus(r.consumption.times(D(1).minus(paidFrac)));
+      left = D(0);
+    }
+  });
+  return unpaid;
+}
 export const sumAdjustments = (adjs) => adjs.reduce((a, p) => a.plus(D(p.amount)), D(0));
 
 /** الرصيد = إجمالي تكلفة الاستهلاك (+ التصحيحات) − إجمالي المدفوعات */
 export function balanceOf(rows, payments, adjustments = []) {
-  return totalsOf(rows).cost.plus(sumAdjustments(adjustments)).minus(sumPayments(payments));
+  return totalsOf(rows).cost.plus(sumAdjustments(adjustments)).minus(sumNet(payments));
 }
 
 export function buildLedger(rows, payments, adjustments = []) {
@@ -185,7 +208,7 @@ export function buildLedger(rows, payments, adjustments = []) {
     ev.push({ key: `a${a.id}`, date: a.date, order: 0, seq: a.createdAt || 0, id: a.id, type: 'adjustment', ref: a, due: D(a.amount), paid: D(0) })
   );
   payments.forEach((p) =>
-    ev.push({ key: `p${p.id}`, date: p.date, order: 1, seq: p.createdAt || 0, id: p.id, type: 'payment', ref: p, due: D(0), paid: D(p.amount) })
+    ev.push({ key: `p${p.id}`, date: p.date, order: 1, seq: p.createdAt || 0, id: p.id, type: 'payment', ref: p, due: D(0), paid: netOf(p) })
   );
   ev.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.order - b.order || a.seq - b.seq || a.id - b.id));
   let bal = D(0);

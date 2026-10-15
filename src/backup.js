@@ -58,7 +58,9 @@ export function validateBackup(obj) {
     const amount = num(p.amount);
     if (!isValidDate(p.date)) errors.push(`${label}: التاريخ غير صالح.`);
     if (amount == null || amount.startsWith('-') || /^0(\.0+)?$/.test(amount)) errors.push(`${label}: المبلغ غير صالح.`);
-    return { id: p.id, date: p.date, amount, method: String(p.method || ''), notes: String(p.notes || ''), createdAt: Number(p.createdAt) || Date.now() };
+    const loss = p.loss == null || p.loss === '' ? '0' : num(p.loss);
+    if (loss == null || loss.startsWith('-') || (amount != null && Number(loss) > Number(amount))) errors.push(`${label}: قيمة الفاقد غير صالحة.`);
+    return { id: p.id, date: p.date, amount, loss: loss ?? '0', method: String(p.method || ''), notes: String(p.notes || ''), createdAt: Number(p.createdAt) || Date.now() };
   });
 
   const adjustments = obj.adjustments.map((a, i) => {

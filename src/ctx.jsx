@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import * as db from './db';
-import { computeRows, totalsOf, buildLedger, balanceOf, sumPayments, sumAdjustments, fmtFixed, fmtDate, todayStr } from './calc';
+import { computeRows, totalsOf, buildLedger, balanceOf, sumPayments, sumLoss, sumNet, unpaidConsumption, sumAdjustments, fmtFixed, fmtDate, todayStr } from './calc';
 
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
@@ -58,6 +58,8 @@ export function AppProvider({ children }) {
       ledger: buildLedger(rows, state.payments, state.adjustments),
       balance: balanceOf(rows, state.payments, state.adjustments),
       paid: sumPayments(state.payments),
+      loss: sumLoss(state.payments),
+      unpaidKwh: unpaidConsumption(rows, sumNet(state.payments)),
       lastPrice: state.readings.length
         ? state.readings.reduce((a, r) => ((r.createdAt || 0) >= (a.createdAt || 0) ? r : a)).price
         : state.settings.price,

@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
-import { D, computeRows, totalsOf, balanceOf, buildLedger, parseNum, daysBetween } from '../src/calc';
+import { D, computeRows, totalsOf, balanceOf, buildLedger, parseNum, daysBetween, unpaidConsumption, sumNet } from '../src/calc';
 import * as db from '../src/db';
 import { buildBackup, validateBackup } from '../src/backup';
 
@@ -92,6 +92,28 @@ describe('الاختبارات الإلزامية', () => {
 
 describe('حالات إضافية', () => {
   beforeEach(() => { id = 0; });
+
+  it('الاستهلاك المتبقي يصبح صفرًا عند سداد كامل المبلغ', () => {
+    const rows = computeRows([R('2026-01-01', 1000, '1'), R('2026-02-01', 1100, '1')]);
+    const pay = [P('2026-02-02', 100)];
+    eq(balanceOf(rows, pay), 0);
+    eq(unpaidConsumption(rows, sumNet(pay)), 0);
+    eq(unpaidConsumption(rows, sumNet([P('2026-02-02', 40)])), 60);
+    eq(unpaidConsumption(rows, 0), 100);
+  });
+
+  it('الفاقد يُدفع ولا يخفّض المستحق ولا الاستهلاك', () => {
+    const rows = computeRows([R('2026-01-01', 1000, '1'), R('2026-02-01', 1100, '1')]);
+    const pay = [{ ...P('2026-02-02', 100), loss: '10' }];
+    eq(balanceOf(rows, pay), 10);
+    eq(unpaidConsumption(rows, sumNet(pay)), 10);
+    eq(buildLedger(rows, pay).at(-1).balance, 10);
+  });
+
+  it('توزيع الدفعات على الفترات بأسعارها (الأقدم أولًا)', () => {
+    const rows = computeRows([R('2026-01-01', 1000), R('2026-02-01', 1100, '0.5'), R('2026-03-01', 1150, '0.7')]);
+    eq(unpaidConsumption(rows, 60).toDecimalPlaces(3), '35.714');
+  });
 
   it('عدة قراءات في اليوم نفسه تتبع تاريخ اليوم وتُرتَّب بوقت الإدخال', () => {
     const rows = computeRows([R('2026-01-01', 1000), R('2026-01-05', 1100), R('2026-01-05', 1130), R('2026-01-05', 1140)]);

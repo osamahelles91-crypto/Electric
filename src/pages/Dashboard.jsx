@@ -15,7 +15,7 @@ function Odometer({ value }) {
 }
 
 export default function Dashboard() {
-  const { rows, totals, paid, balance, settings, fd, openModal } = useApp();
+  const { rows, totals, paid, loss, balance, unpaidKwh, adjTotal, settings, fd, openModal } = useApp();
   const last = rows[rows.length - 1];
   const lastPeriod = last && !last.isOpening ? last : null;
   const credit = balance.lt(0);
@@ -28,6 +28,18 @@ export default function Dashboard() {
           <p className="hero-label">آخر قراءة — {settings.meterName}</p>
           {last ? <Odometer value={last.reading} /> : <p className="hero-empty">لا توجد قراءات بعد</p>}
           <p className="hero-date">{last ? `بتاريخ ${fd(last.date)}` : 'ابدأ بتسجيل قراءة العداد الحالية كقراءة افتتاحية.'}</p>
+        </div>
+        <div className="hero-stats">
+          <div>
+            <span>الاستهلاك المتبقي للدفع</span>
+            <b><Qty v={unpaidKwh} /></b>
+            <small>من إجمالي <Qty v={totals.consumption} /></small>
+          </div>
+          <div>
+            <span>{credit ? 'رصيد دائن لصالحك' : 'المبلغ المتبقي للدفع'}</span>
+            <b><Money v={credit ? balance.abs() : balance} /></b>
+            <small>من إجمالي <Money v={totals.cost.plus(adjTotal)} /></small>
+          </div>
         </div>
         <div className="hero-actions">
           <button type="button" className="btn amber" onClick={() => openModal('reading')}>+ إضافة قراءة</button>
@@ -42,6 +54,7 @@ export default function Dashboard() {
         <div className="cell"><span>إجمالي استهلاك الكهرباء</span><b><Qty v={totals.consumption} /></b></div>
         <div className="cell"><span>إجمالي قيمة الكهرباء</span><b><Money v={totals.cost} /></b></div>
         <div className="cell"><span>إجمالي المدفوعات</span><b><Money v={paid} /></b></div>
+        {!loss.isZero() && <div className="cell"><span>منها فاقد (لا يُحسب من الاستهلاك)</span><b><Money v={loss} /></b></div>}
         <div className={`cell ${settled ? 'ok' : credit ? 'credit' : 'due'}`}>
           <span>{settled ? 'حالة الحساب' : credit ? 'رصيد دائن لصالحك' : 'الرصيد المستحق'}</span>
           <b>{settled ? 'مسدد بالكامل' : <Money v={balance.abs()} />}</b>

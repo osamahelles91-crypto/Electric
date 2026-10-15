@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Chart as ChartJS, registerables } from 'chart.js';
 import { Chart } from 'react-chartjs-2';
 import { useApp } from './ctx';
-import { inRange, monthKey, monthLabel } from './calc';
+import { inRange, monthKey, monthLabel, netOf } from './calc';
 
 ChartJS.register(...registerables);
 ChartJS.defaults.font.family = "'IBM Plex Sans Arabic', Tahoma, system-ui, sans-serif";
@@ -130,7 +130,7 @@ export function DuesPaymentsChart({ bounds }) {
   const paid = {};
   periods.forEach((r) => { const k = monthKey(r.date); due[k] = (due[k] || 0) + Number(r.cost.toFixed(6)); });
   adjustments.filter((a) => inRange(a.date, bounds)).forEach((a) => { const k = monthKey(a.date); due[k] = (due[k] || 0) + Number(a.amount); });
-  payments.filter((p) => inRange(p.date, bounds)).forEach((p) => { const k = monthKey(p.date); paid[k] = (paid[k] || 0) + Number(p.amount); });
+  payments.filter((p) => inRange(p.date, bounds)).forEach((p) => { const k = monthKey(p.date); paid[k] = (paid[k] || 0) + Number(netOf(p).toFixed(6)); });
   const keys = [...new Set([...Object.keys(due), ...Object.keys(paid)])].sort();
   const endBal = keys.map((k) => {
     const upto = ledger.filter((e) => monthKey(e.date) <= k);

@@ -21,7 +21,7 @@ export default function Backup() {
       )
     );
   const exportPayments = () =>
-    download('المدفوعات.csv', toCSV(['رقم العملية', 'التاريخ', 'المبلغ', 'طريقة الدفع', 'الملاحظات'], payments.map((p) => [p.id, p.date, p.amount, p.method, p.notes])));
+    download('المدفوعات.csv', toCSV(['رقم العملية', 'التاريخ', 'المبلغ', 'الفاقد', 'طريقة الدفع', 'الملاحظات'], payments.map((p) => [p.id, p.date, p.amount, p.loss || '0', p.method, p.notes])));
   const exportAll = () =>
     download(`نسخة-احتياطية-كهرباء-${todayStr()}.json`, JSON.stringify(buildBackup({ settings, readings, payments, adjustments }), null, 2), 'application/json');
 
