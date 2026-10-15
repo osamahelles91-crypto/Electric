@@ -50,8 +50,8 @@ export default function Dashboard() {
       </section>
 
       <div className="charts">
-        <ConsumptionChart bounds={ALL} />
-        <CostChart bounds={ALL} />
+        <ConsumptionChart bounds={ALL} limit={12} />
+        <CostChart bounds={ALL} limit={12} />
         <DuesPaymentsChart bounds={ALL} />
       </div>
     </>

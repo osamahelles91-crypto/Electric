@@ -51,11 +51,6 @@ export function validateBackup(obj) {
     }
     return out;
   });
-  const dates = new Set();
-  readings.forEach((r) => {
-    if (dates.has(r.date)) errors.push(`تاريخ قراءة مكرر: ${r.date}`);
-    dates.add(r.date);
-  });
 
   const payments = obj.payments.map((p, i) => {
     const label = `دفعة رقم ${i + 1}`;

@@ -93,6 +93,16 @@ describe('الاختبارات الإلزامية', () => {
 describe('حالات إضافية', () => {
   beforeEach(() => { id = 0; });
 
+  it('عدة قراءات في اليوم نفسه تتبع تاريخ اليوم وتُرتَّب بوقت الإدخال', () => {
+    const rows = computeRows([R('2026-01-01', 1000), R('2026-01-05', 1100), R('2026-01-05', 1130), R('2026-01-05', 1140)]);
+    eq(rows[2].consumption, 30);
+    expect(rows[2].days).toBe(0);
+    expect(rows[2].avgDaily).toBeNull();
+    eq(rows[3].consumption, 10);
+    eq(totalsOf(rows).consumption, 140);
+    expect(validateBackup(buildBackup({ settings: db.DEFAULT_SETTINGS, readings: rows.map(({ id: i, date, reading, price, notes, kind, createdAt }) => ({ id: i, date, reading, price, notes, kind, createdAt })), payments: [], adjustments: [] })).ok).toBe(true);
+  });
+
   it('دقة الفاصلة العائمة', () => {
     const rows = computeRows([R('2026-01-01', '0.1', '0.1'), R('2026-01-11', '0.3', '0.1')]);
     eq(rows[1].consumption, '0.2');

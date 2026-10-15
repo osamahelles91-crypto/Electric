@@ -5,11 +5,11 @@ import { Modal, Field } from '../ui';
 import { Money, Qty } from '../Common';
 
 export default function ReadingForm({ rec, onClose }) {
-  const { settings, readings, saveReading, fd } = useApp();
+  const { settings, readings, saveReading, fd, lastPrice } = useApp();
   const editing = !!rec?.id;
   const [date, setDate] = useState(rec?.date || todayStr());
   const [reading, setReading] = useState(rec?.reading ?? '');
-  const [price, setPrice] = useState(rec?.price ?? settings.price);
+  const [price, setPrice] = useState(rec?.price ?? lastPrice);
   const [notes, setNotes] = useState(rec?.notes || '');
   const [mode, setMode] = useState(rec?.kind === 'replacement' || rec?.kind === 'correction' ? rec.kind : 'normal');
   const [oldFinal, setOldFinal] = useState(rec?.oldFinal ?? '');
@@ -21,11 +21,10 @@ export default function ReadingForm({ rec, onClose }) {
     const pv = parseNum(price);
     const dateOk = isValidDate(date);
     const others = readings.filter((r) => r.id !== rec?.id);
-    const dup = dateOk && others.some((r) => r.date === date);
     let candRow = null;
     let prevRow = null;
     let otherErrors = [];
-    if (dateOk && rv != null && pv != null && !dup) {
+    if (dateOk && rv != null && pv != null) {
       const cand = {
         id: -1, date, reading: rv, price: pv, notes, kind: mode,
         oldFinal: parseNum(oldFinal), newStart: parseNum(newStart) ?? '0',
@@ -37,14 +36,14 @@ export default function ReadingForm({ rec, onClose }) {
       prevRow = rows[idx - 1] || null;
       otherErrors = rows.filter((r) => r.id !== -1 && r.error);
     }
-    return { rv, pv, dateOk, dup, candRow, prevRow, otherErrors };
+    return { rv, pv, dateOk, candRow, prevRow, otherErrors };
   }, [date, reading, price, notes, mode, oldFinal, newStart, readings, rec]);
 
   const negative = (v) => v != null && v.startsWith('-');
   const lower = mode === 'normal' && a.candRow?.error === 'lower';
   const specialErr = mode === 'replacement' && a.candRow?.error === 'replacement';
   const canSave =
-    a.dateOk && a.rv != null && !negative(a.rv) && a.pv != null && !negative(a.pv) && !a.dup &&
+    a.dateOk && a.rv != null && !negative(a.rv) && a.pv != null && !negative(a.pv) &&
     a.candRow && !a.candRow.error && a.otherErrors.length === 0;
 
   const submit = async (e) => {
@@ -75,7 +74,7 @@ export default function ReadingForm({ rec, onClose }) {
       }
     >
       <form id="reading-form" onSubmit={submit} noValidate>
-        <Field label="تاريخ القراءة" error={a.dup ? 'توجد قراءة مسجلة بهذا التاريخ. عدّلها بدل تكرارها.' : null}>
+        <Field label="تاريخ القراءة" hint="يمكن تسجيل أكثر من قراءة في اليوم نفسه، وتُرتَّب حسب وقت إدخالها.">
           <input type="date" value={date} min={settings.startDate || undefined} onChange={(e) => setDate(e.target.value)} required />
         </Field>
         <Field
@@ -86,7 +85,7 @@ export default function ReadingForm({ rec, onClose }) {
         </Field>
         <Field
           label={`سعر الكيلوواط ساعة (${settings.currency})`}
-          hint="يُملأ من الإعدادات، ويمكنك تعديله لهذه الفترة فقط. لا يتغير السعر المحفوظ في القراءات الأخرى."
+          hint="يُستعاد تلقائيًا آخر سعر أدخلته (أو سعر الإعدادات عند أول قراءة). يمكنك تعديله، ولا يتغير سعر القراءات الأخرى."
         >
           <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
         </Field>

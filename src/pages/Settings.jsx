@@ -42,7 +42,7 @@ export default function Settings() {
       <div className="page-head"><h1>الإعدادات</h1></div>
       <form className="panel form-grid" onSubmit={submit} noValidate>
         <Field label="اسم العداد"><input value={f.meterName} onChange={set('meterName')} /></Field>
-        <Field label="سعر الكيلوواط ساعة الافتراضي" error={errors.price} hint="يُستخدم للقراءات الجديدة فقط. تبقى أسعار القراءات السابقة كما هي.">
+        <Field label="سعر الكيلوواط ساعة الافتراضي" error={errors.price} hint="يُستخدم عند أول قراءة فقط. بعدها يُستعاد تلقائيًا آخر سعر أدخلته. تبقى أسعار القراءات السابقة كما هي.">
           <input inputMode="decimal" value={f.price} onChange={set('price')} />
         </Field>
         <Field label="العملة"><input list="currencies" value={f.currency} onChange={set('currency')} />

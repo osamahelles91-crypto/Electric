@@ -58,6 +58,9 @@ export function AppProvider({ children }) {
       ledger: buildLedger(rows, state.payments, state.adjustments),
       balance: balanceOf(rows, state.payments, state.adjustments),
       paid: sumPayments(state.payments),
+      lastPrice: state.readings.length
+        ? state.readings.reduce((a, r) => ((r.createdAt || 0) >= (a.createdAt || 0) ? r : a)).price
+        : state.settings.price,
       adjTotal: sumAdjustments(state.adjustments),
     };
   }, [state]);
