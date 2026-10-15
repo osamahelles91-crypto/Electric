@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../ctx';
+import { getLock, saveLock } from '../lock';
 import { Field } from '../ui';
 import { parseNum, D, isValidDate, todayStr, fmtDate } from '../calc';
 
@@ -68,6 +69,42 @@ export default function Settings() {
         </Field>
         <div className="form-actions"><button type="submit" className="btn primary" disabled={bad}>حفظ الإعدادات</button></div>
       </form>
+      <LockSettings />
     </>
+  );
+}
+
+function LockSettings() {
+  const { notify } = useApp();
+  const [enabled, setEnabled] = useState(true);
+  const [user, setUser] = useState('');
+  const [pw, setPw] = useState('');
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    getLock().then((l) => { setEnabled(l.enabled); setUser(l.user); });
+  }, []);
+
+  const save = async (e) => {
+    e.preventDefault();
+    if (!user.trim()) return setMsg('أدخل اسم مستخدم.');
+    if (pw && pw.length < 4) return setMsg('كلمة المرور 4 أحرف أو أكثر.');
+    await saveLock({ enabled, user, pw });
+    setPw('');
+    setMsg('');
+    notify('حُفظ إعداد القفل');
+  };
+
+  return (
+    <form className="panel form-grid" onSubmit={save} noValidate>
+      <h3>قفل التطبيق</h3>
+      <p className="note">الافتراضي: admin / 1234. غيّرهما لحماية بياناتك. هذا القفل منفصل عن حساب السحابة.</p>
+      <label className="check"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} /> طلب تسجيل الدخول عند فتح التطبيق</label>
+      <Field label="اسم المستخدم"><input dir="ltr" autoCapitalize="none" value={user} onChange={(e) => setUser(e.target.value)} /></Field>
+      <Field label="كلمة مرور جديدة (اتركها فارغة للإبقاء على الحالية)" error={msg}>
+        <input type="password" dir="ltr" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} />
+      </Field>
+      <div className="form-actions"><button type="submit" className="btn primary">حفظ القفل</button></div>
+    </form>
   );
 }

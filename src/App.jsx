@@ -10,6 +10,7 @@ import ChartsPage from './pages/ChartsPage';
 import Settings from './pages/Settings';
 import Backup from './pages/Backup';
 import Cloud from './pages/Cloud';
+import LockGate from './LockScreen';
 import ReadingForm from './forms/ReadingForm';
 import PaymentForm from './forms/PaymentForm';
 import AdjustmentForm from './forms/AdjustmentForm';
@@ -203,8 +204,10 @@ function Shell() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <Shell />
-    </AppProvider>
+    <LockGate>
+      <AppProvider>
+        <Shell />
+      </AppProvider>
+    </LockGate>
   );
 }

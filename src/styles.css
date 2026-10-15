@@ -317,3 +317,11 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; paddi
 .spin { transform-origin: 12px 13px; animation: spin 1.2s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
+/* شاشة القفل */
+.lock-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--bg, #f4f6f8); }
+.lock-card { width: 100%; max-width: 360px; background: var(--surface, #fff); border: 1px solid var(--line, #dde3e8); border-radius: 16px; padding: 24px 20px; display: grid; gap: 12px; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,.08); }
+.lock-card h1 { font-size: 1.25rem; margin: 0; }
+.lock-card label { display: grid; gap: 4px; text-align: right; font-weight: 600; font-size: .9rem; }
+.lock-mark { font-size: 2.2rem; }
+.check { display: flex; gap: 8px; align-items: center; }
