@@ -6,7 +6,7 @@ import {
   signInWithEmailAndPassword,
   signOut as fbSignOut,
 } from 'firebase/auth';
-import { initializeFirestore, collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { initializeFirestore, collection, doc, runTransaction, onSnapshot } from 'firebase/firestore';
 import * as db from '../db';
 import { BUILTIN_CONFIG } from './builtin';
 
@@ -30,7 +30,7 @@ export function setDeviceName(n) {
 }
 
 /** phase: nocfg | signedout | syncing | synced | offline | error */
-export const state = { phase: 'nocfg', email: '', lastSync: null, pending: 0, error: '' };
+export const state = { phase: 'nocfg', email: '', lastSync: null, pending: 0, error: '', server: true };
 const subs = new Set();
 const remoteCbs = new Set();
 const snap = () => ({ ...state });
@@ -91,6 +91,7 @@ let unsub = null;
 let flushTimer = null;
 let flushing = false;
 let firstSnapshot = false;
+let serverSynced = false; // وصلتنا لقطة من الخادم نفسه (لا من الذاكرة المؤقتة)
 
 const online = () => (typeof navigator === 'undefined' ? true : navigator.onLine);
 
@@ -98,9 +99,26 @@ async function refreshPending() {
   try { state.pending = (await db.getOutbox()).length; } catch { /* ignore */ }
 }
 
+const withTimeout = (p, ms) =>
+  Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), ms))]);
+
+/** يرفع سجلًا واحدًا دون أن يطغى على نسخة أحدث موجودة في السحابة (الأحدث يفوز) */
+async function pushOne(e) {
+  const payload = { ...(await db.buildPayload(e)), by: deviceId, byName: getDeviceName() };
+  const ref = doc(col, `${e.store}-${e.id}`);
+  await withTimeout(
+    runTransaction(fs, async (tx) => {
+      const cur = await tx.get(ref);
+      if (cur.exists() && (cur.data().updatedAt || 0) > payload.updatedAt) return;
+      tx.set(ref, payload);
+    }),
+    15000
+  );
+}
+
 function settle() {
   if (state.phase === 'error' || state.phase === 'signedout' || state.phase === 'nocfg') return;
-  state.phase = !online() ? 'offline' : state.pending ? 'syncing' : 'synced';
+  state.phase = !online() || !state.server ? 'offline' : state.pending ? 'syncing' : 'synced';
 }
 
 export function scheduleFlush(ms = 500) {
@@ -110,7 +128,7 @@ export function scheduleFlush(ms = 500) {
 }
 
 async function flush() {
-  if (!col || !firstSnapshot || flushing) return;
+  if (!col || !serverSynced || flushing) return;
   if (!online()) {
     await refreshPending();
     settle();
@@ -121,16 +139,19 @@ async function flush() {
   try {
     const list = await db.getOutbox();
     for (const e of list) {
-      const payload = { ...(await db.buildPayload(e)), by: deviceId, byName: getDeviceName() };
-      await setDoc(doc(col, `${e.store}-${e.id}`), payload);
+      await pushOne(e);
       await db.clearOutbox(e.key, e.updatedAt);
     }
     state.error = '';
     if (state.phase === 'error') state.phase = 'syncing';
     state.lastSync = Date.now();
   } catch (err) {
-    state.phase = 'error';
-    state.error = arabicError(err);
+    if (err?.code === 'timeout' || err?.code === 'unavailable' || err?.code === 'failed-precondition' && !online()) {
+      state.server = false; // اتصال ضعيف أو منقطع: تبقى التعديلات في الصندوق الصادر وتُعاد المحاولة
+    } else {
+      state.phase = 'error';
+      state.error = arabicError(err);
+    }
   } finally {
     flushing = false;
     await refreshPending();
@@ -144,6 +165,7 @@ function stop() {
   unsub = null;
   col = null;
   firstSnapshot = false;
+  serverSynced = false;
   clearTimeout(flushTimer);
 }
 
@@ -162,7 +184,10 @@ async function start(uid) {
   } catch { /* ignore */ }
   unsub = onSnapshot(
     col,
+    { includeMetadataChanges: true },
     async (s) => {
+      state.server = !s.metadata.fromCache;
+      if (state.server) serverSynced = true;
       let changed = false;
       let maxTs = 0;
       const events = [];
@@ -189,7 +214,7 @@ async function start(uid) {
       try { localStorage.setItem(lsKey, String(Math.max(prev, maxTs))); } catch { /* ignore */ }
       if (changed) remoteCbs.forEach((cb) => cb(notify));
       firstSnapshot = true;
-      state.lastSync = Date.now();
+      if (state.server) state.lastSync = Date.now();
       if (state.phase === 'error' && !flushing) state.error = '';
       await refreshPending();
       if (state.phase === 'error') state.phase = 'syncing';
@@ -238,7 +263,9 @@ export function init() {
     }
   });
   db.onLocalChange(() => scheduleFlush(600));
-  window.addEventListener('online', () => { scheduleFlush(0); settle(); emit(); });
+  // إعادة المحاولة كل 20 ثانية ما دامت هناك تعديلات معلّقة (navigator.onLine لا يكشف دائمًا غياب الإنترنت الفعلي)
+  setInterval(() => { if (col && state.pending > 0) scheduleFlush(0); }, 20000);
+  window.addEventListener('online', () => { state.server = true; scheduleFlush(0); settle(); emit(); });
   window.addEventListener('offline', () => { settle(); emit(); });
 }
 

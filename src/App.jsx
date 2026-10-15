@@ -49,6 +49,22 @@ function Icon({ name }) {
   );
 }
 
+const CLOUD_LABEL = { signedout: 'غير مسجّل الدخول', syncing: 'جارٍ المزامنة', synced: 'متزامن', offline: 'بلا اتصال — التعديلات محفوظة على الهاتف', error: 'خطأ في المزامنة' };
+
+const CLOUD = 'M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.3 4.4 4.4 0 0 0 7 18z';
+function CloudIcon({ phase }) {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={CLOUD} />
+      {phase === 'synced' && <path d="M9.5 13.5l2 2 3.5-4" />}
+      {phase === 'syncing' && <path className="spin" d="M10 12.5a2.2 2.2 0 0 1 3.8-1M14 14.5a2.2 2.2 0 0 1-3.8 1" />}
+      {phase === 'offline' && <path d="M4 4l16 16" />}
+      {phase === 'error' && <path d="M12 11v2.5M12 15.8v.01" />}
+      {phase === 'signedout' && <path d="M10 13.5h4" />}
+    </svg>
+  );
+}
+
 function useHashPage() {
   const read = () => {
     const h = window.location.hash.replace('#/', '');
@@ -96,8 +112,9 @@ function Shell() {
             </button>
           )}
           {cloud.phase !== 'nocfg' && (
-            <a href="#/cloud" className={`cloud-chip ${cloud.phase}`} aria-label="حالة السحابة">
-              ☁ {{ signedout: 'غير متصل بحساب', syncing: 'يزامن…', synced: 'متزامن', offline: 'بلا اتصال', error: 'خطأ' }[cloud.phase]}
+            <a href="#/cloud" className={`cloud-icon ${cloud.phase}`} title={CLOUD_LABEL[cloud.phase]} aria-label={`حالة السحابة: ${CLOUD_LABEL[cloud.phase]}`}>
+              <CloudIcon phase={cloud.phase} />
+              {cloud.pending > 0 && cloud.phase !== 'signedout' && <i className="bell-badge pending">{cloud.pending > 9 ? '9+' : cloud.pending}</i>}
             </a>
           )}
         </div>

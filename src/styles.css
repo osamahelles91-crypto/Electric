@@ -304,3 +304,16 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; paddi
 .feed li { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .feed li:last-child { border-bottom: 0; }
 .feed small { color: var(--muted); }
+
+/* ---------- أيقونة حالة السحابة ---------- */
+.cloud-icon { position: relative; text-decoration: none; background: var(--plate2); color: #9fb2c3; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: none; margin-inline-start: 6px; }
+.bell + .cloud-icon, .where + .cloud-icon { margin-inline-start: 6px; }
+.brand > .cloud-icon:first-of-type { margin-inline-start: auto; }
+.cloud-icon.synced { color: #7fe0d4; }
+.cloud-icon.syncing { color: var(--amber); }
+.cloud-icon.offline { color: #c5d2de; background: #5a3a2c; }
+.cloud-icon.error { color: #ff9b8a; }
+.bell-badge.pending { background: var(--amber); color: var(--amber-ink); }
+.spin { transform-origin: 12px 13px; animation: spin 1.2s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }

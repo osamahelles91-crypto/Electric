@@ -36,7 +36,16 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     sync.init();
-    const u1 = sync.subscribe(setCloud);
+    let last = sync.state.phase;
+    const u1 = sync.subscribe((st) => {
+      setCloud(st);
+      if (st.phase === 'offline' && last !== 'offline' && ['synced', 'syncing'].includes(last)) {
+        setToast({ msg: 'لا يوجد اتصال: تُحفظ تعديلاتك على الهاتف وتُرسل عند عودة الإنترنت.', kind: 'err', id: Date.now() });
+      } else if (last === 'offline' && (st.phase === 'syncing' || st.phase === 'synced')) {
+        setToast({ msg: 'عاد الاتصال، جارٍ مزامنة تعديلاتك.', kind: 'ok', id: Date.now() });
+      }
+      last = st.phase;
+    });
     const u2 = sync.onRemoteApplied((events = []) => {
       reload().catch(() => {});
       const st = settingsRef.current;
