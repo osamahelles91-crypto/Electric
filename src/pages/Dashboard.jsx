@@ -20,6 +20,8 @@ export default function Dashboard() {
   const lastPeriod = last && !last.isOpening ? last : null;
   const credit = balance.lt(0);
   const settled = balance.isZero();
+  const total = totals.cost.plus(adjTotal);
+  const pct = total.gt(0) ? Math.max(0, Math.min(100, Math.floor(total.minus(balance).div(total).times(100).toNumber()))) : settled ? 100 : 0;
 
   return (
     <>
@@ -29,16 +31,16 @@ export default function Dashboard() {
           {last ? <Odometer value={last.reading} /> : <p className="hero-empty">لا توجد قراءات بعد</p>}
           <p className="hero-date">{last ? `بتاريخ ${fd(last.date)}` : 'ابدأ بتسجيل قراءة العداد الحالية كقراءة افتتاحية.'}</p>
         </div>
-        <div className="hero-stats">
-          <div>
-            <span>الاستهلاك المتبقي للدفع</span>
-            <b><Qty v={unpaidKwh} /></b>
-            <small>من إجمالي <Qty v={totals.consumption} /></small>
+        <div className={`due-card ${settled ? 'ok' : credit ? 'credit' : 'due'}`}>
+          <div className="due-top">
+            <span>{settled ? 'الحساب مسدد بالكامل' : credit ? 'رصيد دائن لصالحك' : 'المتبقي للدفع'}</span>
+            <em className="due-badge">{settled ? '✓ مسدد' : credit ? 'زيادة دفع' : `${pct}% مدفوع`}</em>
           </div>
-          <div>
-            <span>{credit ? 'رصيد دائن لصالحك' : 'المبلغ المتبقي للدفع'}</span>
-            <b><Money v={credit ? balance.abs() : balance} /></b>
-            <small>من إجمالي <Money v={totals.cost.plus(adjTotal)} /></small>
+          <div className="due-amount"><Money v={credit ? balance.abs() : balance} /></div>
+          <div className="due-bar" role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100"><span className="due-fill" style={{ width: `${pct}%` }} /></div>
+          <div className="due-foot">
+            <span className="due-kwh">غير مدفوعة: <bdi><b><Qty v={unpaidKwh} /></b></bdi></span>
+            <span>من أصل <bdi><Money v={total} /></bdi></span>
           </div>
         </div>
         <div className="hero-actions">

@@ -329,3 +329,17 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; paddi
 .prev-reading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; background: #fff7dd; border: 1px solid #ecc66a; color: #5b3d00; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; }
 .prev-reading b { font-size: 1.35rem; }
 .prev-reading small { flex-basis: 100%; opacity: .85; }
+
+/* بطاقة المتبقي للدفع */
+.due-card { width: 100%; order: 3; background: var(--plate2); border: 1px solid #3a4f61; border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; --accent: #f0b429; }
+.due-card.ok { --accent: #3ccf8e; }
+.due-card.credit { --accent: #5ab0ff; }
+.due-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #c5d2de; font-size: .9rem; }
+.due-badge { font-style: normal; font-weight: 700; font-size: .78rem; color: #0f1a24; background: var(--accent); padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+.due-amount { font-size: 2rem; font-weight: 800; line-height: 1.1; color: var(--accent); }
+.due-amount .cur, .due-amount small { font-size: .95rem; font-weight: 600; color: #c5d2de; }
+.due-bar { height: 8px; background: #1b2a37; border-radius: 999px; overflow: hidden; }
+.due-bar { display: flex; }
+.due-fill { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .4s; }
+.due-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; color: #9fb2c3; font-size: .85rem; }
+.due-kwh b { color: #fff; font-size: 1rem; }
