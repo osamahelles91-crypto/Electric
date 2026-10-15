@@ -343,3 +343,11 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; paddi
 .due-fill { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .4s; }
 .due-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; color: #9fb2c3; font-size: .85rem; }
 .due-kwh b { color: #fff; font-size: 1rem; }
+
+/* بطاقة المتبقي: عمودان بلا شريط تقدم */
+.due-card { grid-template-columns: 1fr 1fr; gap: 0; padding: 0; overflow: hidden; }
+.due-col { display: grid; gap: 4px; padding: 12px 14px; align-content: start; }
+.due-col + .due-col { border-inline-start: 1px solid #3a4f61; }
+.due-col > span { color: #c5d2de; font-size: .88rem; }
+.due-amount.kwh { color: #fff; }
+.due-amount { font-size: 1.7rem; }

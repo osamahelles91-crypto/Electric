@@ -20,8 +20,6 @@ export default function Dashboard() {
   const lastPeriod = last && !last.isOpening ? last : null;
   const credit = balance.lt(0);
   const settled = balance.isZero();
-  const total = totals.cost.plus(adjTotal);
-  const pct = total.gt(0) ? Math.max(0, Math.min(100, Math.floor(total.minus(balance).div(total).times(100).toNumber()))) : settled ? 100 : 0;
 
   return (
     <>
@@ -32,15 +30,13 @@ export default function Dashboard() {
           <p className="hero-date">{last ? `بتاريخ ${fd(last.date)}` : 'ابدأ بتسجيل قراءة العداد الحالية كقراءة افتتاحية.'}</p>
         </div>
         <div className={`due-card ${settled ? 'ok' : credit ? 'credit' : 'due'}`}>
-          <div className="due-top">
-            <span>{settled ? 'الحساب مسدد بالكامل' : credit ? 'رصيد دائن لصالحك' : 'المتبقي للدفع'}</span>
-            <em className="due-badge">{settled ? '✓ مسدد' : credit ? 'زيادة دفع' : `${pct}% مدفوع`}</em>
+          <div className="due-col">
+            <span>{settled ? 'المبلغ المتبقي' : credit ? 'رصيد دائن لصالحك' : 'المبلغ المتبقي'}</span>
+            <div className="due-amount"><Money v={credit ? balance.abs() : balance} /></div>
           </div>
-          <div className="due-amount"><Money v={credit ? balance.abs() : balance} /></div>
-          <div className="due-bar" role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100"><span className="due-fill" style={{ width: `${pct}%` }} /></div>
-          <div className="due-foot">
-            <span className="due-kwh">غير مدفوعة: <bdi><b><Qty v={unpaidKwh} /></b></bdi></span>
-            <span>من أصل <bdi><Money v={total} /></bdi></span>
+          <div className="due-col">
+            <span>الاستهلاك المتبقي</span>
+            <div className="due-amount kwh"><Qty v={unpaidKwh} /></div>
           </div>
         </div>
         <div className="hero-actions">
