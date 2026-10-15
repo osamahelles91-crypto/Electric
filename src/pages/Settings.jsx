@@ -76,7 +76,7 @@ export default function Settings() {
 
 function LockSettings() {
   const { notify } = useApp();
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState(false);
   const [user, setUser] = useState('');
   const [pw, setPw] = useState('');
   const [msg, setMsg] = useState('');
@@ -98,7 +98,7 @@ function LockSettings() {
   return (
     <form className="panel form-grid" onSubmit={save} noValidate>
       <h3>قفل التطبيق</h3>
-      <p className="note">الافتراضي: admin / 1234. غيّرهما لحماية بياناتك. هذا القفل منفصل عن حساب السحابة.</p>
+      <p className="note">القفل متوقف افتراضيًا. فعّله إن أردت طلب اسم مستخدم وكلمة مرور عند فتح التطبيق. إن لم تكتب كلمة مرور جديدة فالبيانات الافتراضية admin / 1234، فيُنصح بتغييرها. هذا القفل منفصل عن حساب السحابة.</p>
       <label className="check"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} /> طلب تسجيل الدخول عند فتح التطبيق</label>
       <Field label="اسم المستخدم"><input dir="ltr" autoCapitalize="none" value={user} onChange={(e) => setUser(e.target.value)} /></Field>
       <Field label="كلمة مرور جديدة (اتركها فارغة للإبقاء على الحالية)" error={msg}>

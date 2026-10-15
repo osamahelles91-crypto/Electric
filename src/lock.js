@@ -1,5 +1,5 @@
 // قفل التطبيق المحلي: اسم مستخدم وكلمة مرور تُطلب عند فتح التطبيق.
-// منفصل عن حساب السحابة. الافتراضي admin / 1234 ويمكن تغييره من الإعدادات.
+// منفصل عن حساب السحابة. الافتراضي: غير مفعّل. عند تفعيله من الإعدادات تكون البيانات الافتراضية admin / 1234 ما لم تُغيَّر.
 const KEY = 'em-lock';
 
 async function sha(text) {
@@ -19,11 +19,11 @@ export function loadLock() {
   return null; // null = الإعداد الافتراضي
 }
 
-/** {enabled, user, hash} — الافتراضي مفعّل admin/1234 */
+/** {enabled, user, hash} — الافتراضي: غير مفعّل (admin/1234 إن فُعّل دون تغيير) */
 export async function getLock() {
   const v = loadLock();
   if (v) return v;
-  return { enabled: true, user: 'admin', hash: await sha('1234') };
+  return { enabled: false, user: 'admin', hash: await sha('1234') };
 }
 
 export async function verify(user, pw) {
