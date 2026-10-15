@@ -39,6 +39,16 @@ export default function ReadingForm({ rec, onClose }) {
     return { rv, pv, dateOk, candRow, prevRow, otherErrors };
   }, [date, reading, price, notes, mode, oldFinal, newStart, readings, rec]);
 
+  // آخر قراءة مسجلة قبل هذا التاريخ، وتظهر دائمًا حتى قبل كتابة أي رقم
+  const prevShown = useMemo(() => {
+    if (!isValidDate(date)) return null;
+    const ts = rec?.createdAt ?? Date.now();
+    const before = readings
+      .filter((r) => r.id !== rec?.id && (r.date < date || (r.date === date && (r.createdAt || 0) <= ts)))
+      .sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : (x.createdAt || 0) - (y.createdAt || 0)));
+    return before[before.length - 1] || null;
+  }, [readings, date, rec]);
+
   const negative = (v) => v != null && v.startsWith('-');
   const lower = mode === 'normal' && a.candRow?.error === 'lower';
   const specialErr = mode === 'replacement' && a.candRow?.error === 'replacement';
@@ -77,10 +87,14 @@ export default function ReadingForm({ rec, onClose }) {
         <Field label="تاريخ القراءة" hint="يمكن تسجيل أكثر من قراءة في اليوم نفسه، وتُرتَّب حسب وقت إدخالها.">
           <input type="date" value={date} min={settings.startDate || undefined} onChange={(e) => setDate(e.target.value)} required />
         </Field>
-        <Field
-          label="قراءة العداد (كيلوواط ساعة)"
-          hint={a.prevRow ? <>القراءة السابقة: <b className="num">{a.prevRow.reading}</b> بتاريخ {fd(a.prevRow.date)}</> : null}
-        >
+        {prevShown && (
+          <div className="prev-reading" aria-live="polite">
+            <span>القراءة السابقة</span>
+            <b className="num">{prevShown.reading}</b>
+            <small>{fd(prevShown.date)} — أدخل رقمًا أكبر منها أو يساويها</small>
+          </div>
+        )}
+        <Field label="قراءة العداد (كيلوواط ساعة)">
           <input inputMode="decimal" autoFocus={!editing} value={reading} onChange={(e) => setReading(e.target.value)} placeholder="مثال: 12850" />
         </Field>
         <Field
