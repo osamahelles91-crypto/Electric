@@ -1,0 +1,6 @@
+{
+  "appId": "com.gbr.electricitymonitor",
+  "appName": "مراقب الكهرباء",
+  "webDir": "dist",
+  "android": { "allowMixedContent": false }
+}

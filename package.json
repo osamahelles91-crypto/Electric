@@ -1,0 +1,29 @@
+{
+  "name": "electricity-monitor",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "chart.js": "^4.5.1",
+    "decimal.js": "^10.6.0",
+    "react": "^19.3.1",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
+    "@vitejs/plugin-react": "^6.1.2",
+    "fake-indexeddb": "^6.2.5",
+    "vite": "^8.3.4",
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^5.0.5"
+  }
+}
