@@ -293,3 +293,14 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; paddi
 .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 6px; }
 .kv dt { color: var(--muted); font-size: 0.8rem; }
 .kv dd { margin: 0; font-weight: 600; }
+
+/* ---------- جرس التحديثات ---------- */
+.bell { position: relative; border: 0; background: var(--plate2); color: #c5d2de; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; margin-inline-start: auto; flex: none; }
+.bell.on { color: var(--amber); }
+.bell + .cloud-chip { margin-inline-start: 6px; }
+.where + .bell { margin-inline-start: 6px; }
+.bell-badge { position: absolute; top: -4px; inset-inline-start: -4px; background: var(--brick); color: #fff; font-style: normal; font-size: 0.68rem; min-width: 18px; height: 18px; line-height: 18px; border-radius: 9px; text-align: center; padding: 0 4px; font-weight: 700; }
+.feed { list-style: none; margin: 0; padding: 0; }
+.feed li { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.feed li:last-child { border-bottom: 0; }
+.feed small { color: var(--muted); }

@@ -65,7 +65,8 @@ function useHashPage() {
 
 function Shell() {
   const page = useHashPage();
-  const { settings, modal, closeModal, openModal, confirmSt, closeConfirm, toast, cloud } = useApp();
+  const { settings, modal, closeModal, openModal, confirmSt, closeConfirm, toast, cloud, activity, unread, markAllRead, clearActivity } = useApp();
+  const [bell, setBell] = useState(false);
   const [sheet, setSheet] = useState(null); // 'more' | 'add' | null
   const Page = PAGES[page][1];
 
@@ -88,6 +89,12 @@ function Shell() {
           <span className="brand-mark" aria-hidden="true">⚡</span>
           <div><strong>مراقب استهلاك الكهرباء</strong><small>{settings.meterName}</small></div>
           {inMore && <span className="where">{PAGES[page][0]}</span>}
+          {cloud.phase !== 'nocfg' && (
+            <button type="button" className={`bell ${unread ? 'on' : ''}`} onClick={() => { setBell(true); markAllRead(); }} aria-label={`التحديثات${unread ? ` (${unread} جديد)` : ''}`}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0" /></svg>
+              {unread > 0 && <i className="bell-badge">{unread > 9 ? '9+' : unread}</i>}
+            </button>
+          )}
           {cloud.phase !== 'nocfg' && (
             <a href="#/cloud" className={`cloud-chip ${cloud.phase}`} aria-label="حالة السحابة">
               ☁ {{ signedout: 'غير متصل بحساب', syncing: 'يزامن…', synced: 'متزامن', offline: 'بلا اتصال', error: 'خطأ' }[cloud.phase]}
@@ -139,6 +146,23 @@ function Shell() {
       {modal?.type === 'reading' && <ReadingForm key={modal.rec?.id ?? 'new'} rec={modal.rec} onClose={closeModal} />}
       {modal?.type === 'payment' && <PaymentForm key={modal.rec?.id ?? 'new'} rec={modal.rec} onClose={closeModal} />}
       {modal?.type === 'adjustment' && <AdjustmentForm key={modal.rec?.id ?? 'new'} rec={modal.rec} onClose={closeModal} />}
+
+      {bell && (
+        <Modal title="التحديثات من الأجهزة الأخرى" onClose={() => setBell(false)} footer={activity.length ? <button type="button" className="btn ghost" onClick={clearActivity}>مسح السجل</button> : null}>
+          {activity.length === 0 ? (
+            <p className="empty">لا توجد تحديثات بعد. عندما يضيف جهازك الآخر قراءة أو دفعة يظهر هنا تنبيه.</p>
+          ) : (
+            <ul className="feed">
+              {activity.map((i) => (
+                <li key={i.id}>
+                  <span>{i.text}</span>
+                  <small className="num">{new Date(i.ts).toLocaleString('en-GB', { hour12: false, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</small>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Modal>
+      )}
 
       {confirmSt && (
         <Modal

@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { D, computeRows, totalsOf, balanceOf, buildLedger, parseNum, daysBetween, unpaidConsumption, sumNet } from '../src/calc';
 import * as db from '../src/db';
 import { buildBackup, validateBackup } from '../src/backup';
+import { describeEvent, toItems } from '../src/activity';
 
 let id = 0;
 const R = (date, reading, price = '0.5', extra = {}) => ({ id: ++id, date, reading: String(reading), price: String(price), notes: '', kind: 'normal', createdAt: id, ...extra });
@@ -97,12 +98,12 @@ describe('المزامنة المحلية (الصندوق الصادر)', () => 
     expect(pid).toBeGreaterThan(1e12);
     expect((await db.getOutbox()).some((e) => e.key === `payments/${pid}` && e.op === 'put')).toBe(true);
     const p = (await db.getAll('payments')).find((x) => x.id === pid);
-    expect(await db.applyRemote({ store: 'payments', id: pid, deleted: false, data: { ...p, amount: '9' }, updatedAt: p.updatedAt - 1 })).toBe(false);
+    expect(await db.applyRemote({ store: 'payments', id: pid, deleted: false, data: { ...p, amount: '9' }, updatedAt: p.updatedAt - 1 })).toBeNull();
     expect((await db.getAll('payments')).find((x) => x.id === pid).amount).toBe('5');
-    expect(await db.applyRemote({ store: 'payments', id: pid, deleted: false, data: { ...p, amount: '9' }, updatedAt: p.updatedAt + 10 })).toBe(true);
+    expect(await db.applyRemote({ store: 'payments', id: pid, deleted: false, data: { ...p, amount: '9' }, updatedAt: p.updatedAt + 10 })).toMatchObject({ op: 'edit' });
     expect((await db.getAll('payments')).find((x) => x.id === pid).amount).toBe('9');
     expect((await db.getOutbox()).some((e) => e.key === `payments/${pid}`)).toBe(false);
-    expect(await db.applyRemote({ store: 'payments', id: pid, deleted: true, data: null, updatedAt: p.updatedAt + 20 })).toBe(true);
+    expect(await db.applyRemote({ store: 'payments', id: pid, deleted: true, data: null, updatedAt: p.updatedAt + 20 })).toMatchObject({ op: 'del' });
     expect((await db.getAll('payments')).some((x) => x.id === pid)).toBe(false);
   });
 
@@ -111,8 +112,23 @@ describe('المزامنة المحلية (الصندوق الصادر)', () => 
     const p = (await db.getAll('payments')).find((x) => x.id === pid);
     await db.delRec('payments', pid);
     expect((await db.getOutbox()).find((e) => e.key === `payments/${pid}`).op).toBe('del');
-    expect(await db.applyRemote({ store: 'payments', id: pid, deleted: false, data: p, updatedAt: p.updatedAt })).toBe(false);
+    expect(await db.applyRemote({ store: 'payments', id: pid, deleted: false, data: p, updatedAt: p.updatedAt })).toBeNull();
     expect((await db.getAll('payments')).some((x) => x.id === pid)).toBe(false);
+  });
+});
+
+describe('تنبيهات الجهاز الآخر', () => {
+  const fmt = { fd: (d) => d, currency: 'شيكل' };
+  it('وصف الأحداث بالعربية', () => {
+    expect(describeEvent({ op: 'add', store: 'readings', data: { reading: '1250', date: '2026-10-15' }, by: 'هاتف أحمد' }, fmt)).toBe('هاتف أحمد أضاف قراءة 1250 ك.و.س (2026-10-15)');
+    expect(describeEvent({ op: 'add', store: 'payments', data: { amount: '100', loss: '10', date: '2026-10-15' }, by: 'س' }, fmt)).toContain('دفعة 100 شيكل (منها فاقد 10)');
+    expect(describeEvent({ op: 'del', store: 'payments', data: { amount: '5' } }, fmt)).toContain('جهاز آخر حذف دفعة');
+  });
+  it('التلخيص عند كثرة التحديثات', () => {
+    const ev = Array.from({ length: 6 }, (_, i) => ({ op: 'add', store: 'readings', data: { reading: String(i) }, by: 'س', ts: i + 1 }));
+    expect(toItems(ev, fmt)).toHaveLength(1);
+    expect(toItems(ev.slice(0, 2), fmt)).toHaveLength(2);
+    expect(toItems([], fmt)).toHaveLength(0);
   });
 });
 

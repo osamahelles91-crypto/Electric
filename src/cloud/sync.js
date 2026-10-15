@@ -12,6 +12,23 @@ import { BUILTIN_CONFIG } from './builtin';
 
 const CFG_KEY = 'em-cloud-config';
 
+function loadDeviceId() {
+  let id = '';
+  try { id = localStorage.getItem('em-device-id') || ''; } catch { /* ignore */ }
+  if (!id) {
+    id = Math.random().toString(36).slice(2, 10);
+    try { localStorage.setItem('em-device-id', id); } catch { /* ignore */ }
+  }
+  return id;
+}
+const deviceId = loadDeviceId();
+export function getDeviceName() {
+  try { return localStorage.getItem('em-device-name') || `جهاز ${deviceId.slice(0, 3)}`; } catch { return 'جهاز'; }
+}
+export function setDeviceName(n) {
+  try { localStorage.setItem('em-device-name', n.trim().slice(0, 30)); } catch { /* ignore */ }
+}
+
 /** phase: nocfg | signedout | syncing | synced | offline | error */
 export const state = { phase: 'nocfg', email: '', lastSync: null, pending: 0, error: '' };
 const subs = new Set();
@@ -104,7 +121,7 @@ async function flush() {
   try {
     const list = await db.getOutbox();
     for (const e of list) {
-      const payload = await db.buildPayload(e);
+      const payload = { ...(await db.buildPayload(e)), by: deviceId, byName: getDeviceName() };
       await setDoc(doc(col, `${e.store}-${e.id}`), payload);
       await db.clearOutbox(e.key, e.updatedAt);
     }
@@ -147,15 +164,30 @@ async function start(uid) {
     col,
     async (s) => {
       let changed = false;
+      let maxTs = 0;
+      const events = [];
       for (const ch of s.docChanges()) {
         if (ch.type === 'removed') continue;
         const d = ch.doc.data();
         if (!d?.store) continue;
+        maxTs = Math.max(maxTs, d.updatedAt || 0);
         try {
-          if (await db.applyRemote({ store: d.store, id: d.id, deleted: !!d.deleted, data: d.data, updatedAt: d.updatedAt || 0 })) changed = true;
+          const res = await db.applyRemote({ store: d.store, id: d.id, deleted: !!d.deleted, data: d.data, updatedAt: d.updatedAt || 0 });
+          if (res) {
+            changed = true;
+            if (d.by !== deviceId && (res.op !== 'del' || res.rec)) {
+              events.push({ op: res.op, store: d.store, data: res.op === 'del' ? res.rec : d.data, by: d.byName || '', ts: d.updatedAt || 0 });
+            }
+          }
         } catch { /* ignore one bad record */ }
       }
-      if (changed) remoteCbs.forEach((cb) => cb());
+      // أول دخول: لا إشعارات للبيانات القديمة. وفي التشغيلات التالية: فقط ما جدّ بعد آخر ما رأيته
+      const lsKey = `em-cloud-lastseen-${uid}`;
+      let prev = 0;
+      try { prev = Number(localStorage.getItem(lsKey) || 0); } catch { /* ignore */ }
+      const notify = firstSnapshot ? events : prev ? events.filter((e) => e.ts > prev) : [];
+      try { localStorage.setItem(lsKey, String(Math.max(prev, maxTs))); } catch { /* ignore */ }
+      if (changed) remoteCbs.forEach((cb) => cb(notify));
       firstSnapshot = true;
       state.lastSync = Date.now();
       if (state.phase === 'error' && !flushing) state.error = '';

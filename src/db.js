@@ -202,9 +202,10 @@ export async function buildPayload(e) {
   return { store: e.store, id: e.id, deleted: true, data: null, updatedAt: e.updatedAt };
 }
 
-/** يطبّق تعديلًا قادمًا من السحابة إذا كان أحدث من النسخة المحلية (دون تسجيله في الصندوق الصادر) */
+/** يطبّق تعديلًا قادمًا من السحابة إذا كان أحدث من النسخة المحلية (دون تسجيله في الصندوق الصادر).
+ *  يعيد {op:'add'|'edit'|'del', rec} أو null إن لم يُطبَّق شيء */
 export async function applyRemote({ store, id, deleted, data, updatedAt }) {
-  if (!STORES.includes(store) && store !== 'settings') return false;
+  if (!STORES.includes(store) && store !== 'settings') return null;
   const db = await openDB();
   const tx = db.transaction([store, 'outbox'], 'readwrite');
   const key = keyOf(store, id);
@@ -214,11 +215,11 @@ export async function applyRemote({ store, id, deleted, data, updatedAt }) {
   const localTs = Math.max(pend?.updatedAt || 0, local?.updatedAt || local?.createdAt || 0);
   if (updatedAt <= localTs) {
     await done(tx);
-    return false;
+    return null;
   }
   if (deleted) tx.objectStore(store).delete(idKey);
   else tx.objectStore(store).put(store === 'settings' ? { key: 'main', value: data, updatedAt } : { ...data, id, updatedAt });
   tx.objectStore('outbox').delete(key);
   await done(tx);
-  return true;
+  return { op: deleted ? 'del' : local ? 'edit' : 'add', rec: local || null };
 }

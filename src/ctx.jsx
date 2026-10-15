@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as db from './db';
 import * as sync from './cloud/sync';
+import { loadActivity, saveActivity, toItems } from './activity';
 import { computeRows, totalsOf, buildLedger, balanceOf, sumPayments, sumLoss, sumNet, unpaidConsumption, sumAdjustments, fmtFixed, fmtDate, todayStr } from './calc';
 
 const Ctx = createContext(null);
@@ -13,6 +14,10 @@ export function AppProvider({ children }) {
   const [toast, setToast] = useState(null);
   const [fatal, setFatal] = useState(null);
   const [cloud, setCloud] = useState(sync.state);
+  const [activity, setActivity] = useState(loadActivity);
+  const settingsRef = useRef(db.DEFAULT_SETTINGS);
+  settingsRef.current = state.settings;
+  useEffect(() => { saveActivity(activity); }, [activity]);
 
   const reload = useCallback(async () => {
     const [readings, payments, adjustments, settings] = await Promise.all([
@@ -32,7 +37,15 @@ export function AppProvider({ children }) {
   useEffect(() => {
     sync.init();
     const u1 = sync.subscribe(setCloud);
-    const u2 = sync.onRemoteApplied(() => reload().catch(() => {}));
+    const u2 = sync.onRemoteApplied((events = []) => {
+      reload().catch(() => {});
+      const st = settingsRef.current;
+      const items = toItems(events, { fd: (d) => fmtDate(d, st.dateFormat), currency: st.currency });
+      if (!items.length) return;
+      setActivity((a) => [...items, ...a].slice(0, 50));
+      setToast({ msg: `🔔 ${items[0].text}`, kind: 'ok', id: Date.now() });
+      try { navigator.vibrate?.(150); } catch { /* ignore */ }
+    });
     return () => { u1(); u2(); };
   }, [reload]);
 
@@ -100,6 +113,10 @@ export function AppProvider({ children }) {
       },
       toast,
       cloud,
+      activity,
+      unread: activity.filter((i) => !i.read).length,
+      markAllRead: () => setActivity((a) => a.map((i) => ({ ...i, read: true }))),
+      clearActivity: () => setActivity([]),
       saveReading: upsert('readings', 'القراءة'),
       deleteReading: remove('readings', 'القراءة'),
       savePayment: upsert('payments', 'الدفعة'),
@@ -110,7 +127,7 @@ export function AppProvider({ children }) {
       restoreAll: (data) => run(() => db.replaceAll(data), 'تمت استعادة البيانات'),
       addOpening: (rec) => run(() => db.addRec('readings', rec), 'تم تسجيل القراءة الافتتاحية'),
     };
-  }, [state, derived, modal, confirmSt, toast, cloud, run, notify]);
+  }, [state, derived, modal, confirmSt, toast, cloud, activity, run, notify]);
 
   if (fatal) {
     return (

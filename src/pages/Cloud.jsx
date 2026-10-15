@@ -26,6 +26,7 @@ export default function Cloud() {
   const [pw, setPw] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [devName, setDevName] = useState(sync.getDeviceName());
 
   const copy = async (text) => {
     try {
@@ -135,6 +136,9 @@ export default function Cloud() {
           <button type="button" className="btn primary" onClick={() => sync.syncNow()}>مزامنة الآن</button>
           <button type="button" className="btn ghost" onClick={() => sync.signOutNow()}>تسجيل الخروج</button>
         </div>
+        <Field label="اسم هذا الجهاز" hint="يظهر للأجهزة الأخرى في تنبيه «ماذا رفع هذا الجهاز».">
+          <input value={devName} onChange={(e) => setDevName(e.target.value)} onBlur={() => sync.setDeviceName(devName)} />
+        </Field>
         <p className="note">عند تسجيل الخروج تبقى بياناتك على هذا الجهاز ولا تُحذف. عند التعديل من جهازين في الوقت نفسه يُعتمد الأحدث.</p>
       </section>
       {rulesBox}
