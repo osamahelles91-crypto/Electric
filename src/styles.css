@@ -190,3 +190,50 @@ td.acts { white-space: nowrap; text-align: end; }
 .hero-stats b { font-size: 1.3rem; color: #fff; }
 .hero-stats small { color: #9fb2c3; font-size: 0.8rem; }
 .hero-actions { order: 4; }
+
+/* ---------- عرض مضغوط (احتواء) ---------- */
+body { font-size: 14px; }
+h1 { font-size: 1.25rem; }
+h3 { font-size: 1rem; margin-bottom: 8px; }
+.topbar { padding: 8px 12px 0; }
+.brand { margin-bottom: 2px; gap: 10px; }
+.brand-mark { font-size: 1.2rem; }
+.brand strong { font-size: 0.95rem; }
+.brand small { font-size: 0.78rem; }
+.nav a { padding: 8px 10px; font-size: 0.9rem; }
+.page { padding: 10px 10px 76px; }
+.page-head { margin-bottom: 10px; }
+.btn { min-height: 40px; padding: 6px 12px; font-size: 0.92rem; }
+.btn.small { min-height: 32px; }
+.hero { padding: 12px; gap: 10px; margin-bottom: 10px; }
+.hero-label { margin: 0 0 4px; font-size: 0.85rem; }
+.hero-date { margin-top: 6px; font-size: 0.85rem; }
+.odo-d { font-size: clamp(1.3rem, 6vw, 1.9rem); }
+.odo-unit { font-size: 0.85rem; }
+.hero-actions { width: 100%; }
+.hero-actions .btn { flex: 1; }
+.hero-stats > div { padding: 8px 10px; }
+.hero-stats b { font-size: 1.05rem; }
+.cells { grid-template-columns: 1fr 1fr; margin-bottom: 10px; }
+.cell { padding: 8px 10px; gap: 0; }
+.cell span { font-size: 0.78rem; }
+.cell b { font-size: 1rem; }
+.panel { padding: 12px; margin-bottom: 10px; }
+.chart-box { height: 230px; }
+.summary { grid-template-columns: 1fr 1fr; margin: 10px 0; }
+.summary > div { padding: 8px 10px; }
+.summary b { font-size: 1rem; }
+th, td { padding: 8px; }
+table.simple th, table.simple td { padding: 9px 6px; }
+input, select { min-height: 40px; }
+.chip { min-height: 34px; padding: 4px 12px; }
+.quickbar { padding: 6px 10px; gap: 8px; }
+.dialog-body { padding: 12px 14px; }
+.dialog > footer { padding: 10px 14px; }
+.field { margin-bottom: 10px; }
+.toast { bottom: 64px; }
+@media (min-width: 700px) {
+  body { font-size: 15px; }
+  .cells, .summary { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  .toast { bottom: 24px; }
+}
