@@ -12,6 +12,11 @@ service cloud.firestore {
   }
 }`;
 
+const DOMAIN = '@electric-monitor.app';
+const USER_RE = /^[a-z0-9._-]{3,30}$/;
+const toEmail = (u) => `${u.trim().toLowerCase()}${DOMAIN}`;
+const showUser = (e) => (e || '').replace(DOMAIN, '');
+
 const PHASE = {
   syncing: 'جارٍ المزامنة…',
   synced: 'متزامن',
@@ -22,7 +27,7 @@ const PHASE = {
 export default function Cloud() {
   const { cloud, notify } = useApp();
   const [cfgText, setCfgText] = useState('');
-  const [email, setEmail] = useState('');
+  const [user, setUser] = useState('');
   const [pw, setPw] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -49,10 +54,14 @@ export default function Cloud() {
 
   const auth = (mode) => async (e) => {
     e.preventDefault();
+    if (!USER_RE.test(user.trim().toLowerCase())) {
+      setMsg('اسم المستخدم: من 3 إلى 30 حرفًا إنجليزيًا أو أرقامًا (يمكن استخدام . _ -) ودون مسافات.');
+      return;
+    }
     setBusy(true);
     setMsg('');
     try {
-      await (mode === 'up' ? sync.signUp(email.trim(), pw) : sync.signIn(email.trim(), pw));
+      await (mode === 'up' ? sync.signUp(toEmail(user), pw) : sync.signIn(toEmail(user), pw));
       setPw('');
     } catch (err) {
       setMsg(sync.arabicError(err));
@@ -104,13 +113,14 @@ export default function Cloud() {
         <div className="page-head"><h1>السحابة</h1></div>
         <form className="panel" onSubmit={auth('in')} noValidate>
           <h3>تسجيل الدخول</h3>
-          <Field label="البريد الإلكتروني"><input type="email" dir="ltr" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
-          <Field label="كلمة المرور (6 أحرف على الأقل)"><input type="password" dir="ltr" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></Field>
+          <Field label="اسم المستخدم" hint="أحرف إنجليزية وأرقام فقط، مثل: osama2026. لا حاجة لبريد إلكتروني."><input dir="ltr" autoCapitalize="none" autoCorrect="off" autoComplete="username" value={user} onChange={(e) => setUser(e.target.value)} /></Field>
+          <Field label="كلمة المرور (8 أحرف أو أكثر)" hint="لا توجد استعادة لكلمة المرور، فاحفظها جيدًا."><input type="password" dir="ltr" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></Field>
           {msg && <div className="alert warn" role="alert">{msg}</div>}
           <div className="row-btns">
-            <button type="submit" className="btn primary" disabled={busy || !email || pw.length < 6}>تسجيل الدخول</button>
-            <button type="button" className="btn ghost" disabled={busy || !email || pw.length < 6} onClick={auth('up')}>إنشاء حساب جديد</button>
+            <button type="submit" className="btn primary" disabled={busy || !user || pw.length < 8}>تسجيل الدخول</button>
+            <button type="button" className="btn ghost" disabled={busy || !user || pw.length < 8} onClick={auth('up')}>إنشاء حساب جديد</button>
           </div>
+          <p className="note">على جهازك الأول اضغط «إنشاء حساب جديد»، وعلى الأجهزة الأخرى اضغط «تسجيل الدخول» بالاسم نفسه.</p>
           <p className="note">بعد الدخول تُرفع بياناتك الحالية على هذا الجهاز إلى حسابك وتُدمج مع ما في السحابة.</p>
         </form>
         {rulesBox}
@@ -125,7 +135,7 @@ export default function Cloud() {
       <section className="panel">
         <div className={`sync-state ${cloud.phase}`}>
           <b>{PHASE[cloud.phase] || cloud.phase}</b>
-          <span dir="ltr">{cloud.email}</span>
+          <span dir="ltr">{showUser(cloud.email)}</span>
         </div>
         {cloud.error && <div className="alert warn" role="alert">{cloud.error}</div>}
         <dl className="kv">
