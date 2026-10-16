@@ -12,6 +12,7 @@ import Settings from './pages/Settings';
 import Backup from './pages/Backup';
 import Cloud from './pages/Cloud';
 import LockGate from './LockScreen';
+import PullRefresh from './PullRefresh';
 import ReadingForm from './forms/ReadingForm';
 import PaymentForm from './forms/PaymentForm';
 import AdjustmentForm from './forms/AdjustmentForm';
@@ -146,7 +147,7 @@ function Shell() {
         </nav>
       </header>
 
-      <main className="page"><Page /></main>
+      <main className="page"><PullRefresh /><Page /></main>
 
       {sheet && <div className="scrim" onClick={() => setSheet(null)} />}
 

@@ -143,7 +143,7 @@ export default function Cloud() {
           <div><dt>تعديلات بانتظار الإرسال</dt><dd className="num">{cloud.pending}</dd></div>
         </dl>
         <div className="row-btns">
-          <button type="button" className="btn primary" onClick={() => sync.syncNow()}>مزامنة الآن</button>
+          <button type="button" className="btn primary" onClick={async () => { const r = await sync.syncNow(); if (r.ok) notify('تمت المزامنة بنجاح'); else notify(`لم تتم المزامنة: ${r.reason}`, 'err'); }}>مزامنة الآن</button>
           <button type="button" className="btn ghost" onClick={() => sync.signOutNow()}>تسجيل الخروج</button>
         </div>
         <Field label="اسم هذا الجهاز" hint="يظهر للأجهزة الأخرى في تنبيه «ماذا رفع هذا الجهاز».">

@@ -275,8 +275,26 @@ export function init() {
 export const signUp = (email, pw) => createUserWithEmailAndPassword(auth, email, pw);
 export const signIn = (email, pw) => signInWithEmailAndPassword(auth, email, pw);
 export const signOutNow = () => fbSignOut(auth);
-export function syncNow() {
-  scheduleFlush(0);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** مزامنة يدوية تعيد النتيجة: {ok:true} أو {ok:false, reason} بنص عربي يشرح السبب */
+export async function syncNow() {
+  if (state.phase === 'nocfg') return { ok: false, reason: 'السحابة غير مُعدّة في هذا التطبيق.' };
+  if (!col) {
+    if (state.phase === 'error') return { ok: false, reason: state.error || 'خطأ في إعداد السحابة.' };
+    return { ok: false, reason: 'لم تسجّل الدخول إلى السحابة. افتح «المزيد ← السحابة» وسجّل الدخول.' };
+  }
+  if (!online()) return { ok: false, reason: 'لا يوجد اتصال بالإنترنت. التعديلات محفوظة على الهاتف وستُرفع عند عودة الاتصال.' };
+  // الانتظار حتى تصل لقطة من الخادم (أول اتصال)
+  for (let i = 0; i < 40 && !serverSynced; i += 1) await sleep(250);
+  if (!serverSynced) return { ok: false, reason: 'تعذّر الوصول إلى خادم Firebase (الاتصال ضعيف أو محجوب). ستُعاد المحاولة تلقائيًا.' };
+  for (let i = 0; i < 60 && flushing; i += 1) await sleep(250);
+  if (state.phase === 'error' && state.error) state.phase = 'syncing';
+  await flush();
+  if (state.phase === 'error') return { ok: false, reason: state.error || 'حدث خطأ في المزامنة.' };
+  if (!state.server) return { ok: false, reason: 'انقطع الاتصال بالخادم أثناء الرفع. التعديلات محفوظة وستُرسل لاحقًا.' };
+  if (state.pending > 0) return { ok: false, reason: `بقيت ${state.pending} تعديلات لم تُرفع بعد. ستُعاد المحاولة تلقائيًا.` };
+  return { ok: true };
 }
 
 /** يضع علامة حذف على كل سجلات الحساب في السحابة (فتُحذف أيضًا من الأجهزة الأخرى عند مزامنتها). يعيد عدد السجلات، أو null إن لم يكن هناك حساب مسجَّل */
