@@ -38,3 +38,30 @@ export async function download(name, text, type = 'text/csv;charset=utf-8') {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/** يحفظ/يشارك ملفًا ثنائيًا (مثل PDF): على أندرويد عبر قائمة المشاركة، وعلى الويب كتنزيل */
+export async function downloadBlob(name, blob) {
+  if (Capacitor.isNativePlatform()) {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    const { Share } = await import('@capacitor/share');
+    const buf = new Uint8Array(await blob.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    const safe = name.replace(/[\\/:*?"<>|]/g, '_');
+    const res = await Filesystem.writeFile({ path: safe, data: btoa(bin), directory: Directory.Cache });
+    try {
+      await Share.share({ title: safe, files: [res.uri], dialogTitle: 'حفظ الملف أو مشاركته' });
+    } catch (e) {
+      if (!/cancel/i.test(String(e?.message || e))) throw e;
+    }
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

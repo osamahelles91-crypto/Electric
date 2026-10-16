@@ -2,13 +2,13 @@ import { Fragment, useMemo, useState } from 'react';
 import { useApp } from '../ctx';
 import { Money, Qty, Empty } from '../Common';
 import { totalsOf, fmtQty, computeRows } from '../calc';
-import { toCSV, download } from '../csv';
+import { exportReadingsPdf } from '../pdf';
 
 const KIND = { correction: 'تصحيح قراءة سابقة', replacement: 'استبدال عداد' };
 const timeOf = (ts) => (ts ? new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '');
 
 export default function Readings() {
-  const { rows, settings, fd, openModal, deleteReading, readings, ask, notify } = useApp();
+  const { rows, settings, fd, openModal, deleteReading, readings, ask, notify, paid, balance } = useApp();
   const [q, setQ] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -45,15 +45,16 @@ export default function Readings() {
     if (ok) deleteReading(r.id);
   };
 
-  const exportCsv = () => {
-    const dec = settings.decimals;
-    const head = ['رقم القراءة', 'التاريخ', 'قراءة العداد', 'الاستهلاك (ك.و.س)', 'المدة (يوم)', 'متوسط يومي', 'السعر', 'التكلفة', 'الملاحظات'];
-    const body = [...shown].reverse().map((r) => [
-      r.n, r.date, r.reading, r.isOpening ? '' : r.consumption.toFixed(), r.isOpening ? '' : r.days,
-      r.avgDaily ? r.avgDaily.toDecimalPlaces(3).toFixed() : '', r.price, r.isOpening ? '' : r.cost.toFixed(dec),
-      [r.isOpening ? 'قراءة افتتاحية' : KIND[r.kind], r.notes].filter(Boolean).join(' - '),
-    ]);
-    download('القراءات.csv', toCSV(head, body));
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const exportPdf = async () => {
+    if (pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      await exportReadingsPdf({ shown, settings, fd, paid, balance });
+    } catch (e) {
+      notify(`تعذّر إنشاء PDF: ${e?.message || e}`, 'err');
+    }
+    setPdfBusy(false);
   };
 
   return (
@@ -61,7 +62,7 @@ export default function Readings() {
       <div className="page-head">
         <h1>القراءات</h1>
         <div className="row-btns">
-          <button type="button" className="btn ghost" onClick={exportCsv} disabled={!rows.length}>تصدير CSV</button>
+          <button type="button" className="btn ghost" onClick={exportPdf} disabled={!rows.length || pdfBusy}>{pdfBusy ? 'جارٍ الإنشاء…' : 'تصدير PDF'}</button>
           <button type="button" className="btn primary" onClick={() => openModal('reading')}>+ إضافة قراءة</button>
         </div>
       </div>
