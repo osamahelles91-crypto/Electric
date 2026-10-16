@@ -351,3 +351,14 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; paddi
 .due-col > span { color: #c5d2de; font-size: .88rem; }
 .due-amount.kwh { color: #fff; }
 .due-amount { font-size: 1.7rem; }
+
+/* الرقم الأهم: إجمالي الاستهلاك */
+.hero-main { width: 100%; text-align: center; }
+.hero-total { font-size: 3.1rem; font-weight: 800; line-height: 1.1; color: #f0b429; margin: 4px 0; }
+.hero-total .u, .hero-total small { font-size: 1.1rem; font-weight: 600; color: #c5d2de; }
+.hero-date b { color: #fff; }
+.due-card.three { grid-template-columns: repeat(3, 1fr); }
+.due-card.three .due-col { padding: 10px 8px; text-align: center; }
+.due-card.three .due-col > span { font-size: .78rem; }
+.due-card.three .due-amount { font-size: 1.15rem; }
+.due-card.three .due-amount { white-space: nowrap; font-size: 1.02rem; }
