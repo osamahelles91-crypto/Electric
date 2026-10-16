@@ -6,7 +6,7 @@ import {
   signInWithEmailAndPassword,
   signOut as fbSignOut,
 } from 'firebase/auth';
-import { initializeFirestore, collection, doc, runTransaction, onSnapshot } from 'firebase/firestore';
+import { initializeFirestore, collection, doc, runTransaction, onSnapshot, getDocsFromServer, writeBatch } from 'firebase/firestore';
 import * as db from '../db';
 import { BUILTIN_CONFIG } from './builtin';
 
@@ -78,6 +78,9 @@ export function arabicError(e) {
     'auth/invalid-api-key': 'مفتاح API غير صحيح. راجع إعداد Firebase.',
     'permission-denied': 'رفضت قواعد Firestore الوصول. انسخ القواعد الموضحة في صفحة السحابة.',
     unavailable: 'الخدمة غير متاحة الآن (تحقق من الإنترنت).',
+    'network-offline': 'لا يوجد اتصال بالإنترنت. التصفير يحتاج اتصالًا لمسح السحابة أيضًا.',
+    timeout: 'انتهت مهلة الاتصال. أعد المحاولة.',
+    'configuration-not-found': 'خدمة Authentication غير مفعّلة بعد في مشروع Firebase.',
     'failed-precondition': 'لم تُنشأ قاعدة Firestore بعد في مشروعك.',
   };
   return map[c] || `${c || 'خطأ'}: ${e?.message || e}`;
@@ -274,4 +277,29 @@ export const signIn = (email, pw) => signInWithEmailAndPassword(auth, email, pw)
 export const signOutNow = () => fbSignOut(auth);
 export function syncNow() {
   scheduleFlush(0);
+}
+
+/** يضع علامة حذف على كل سجلات الحساب في السحابة (فتُحذف أيضًا من الأجهزة الأخرى عند مزامنتها). يعيد عدد السجلات، أو null إن لم يكن هناك حساب مسجَّل */
+export async function wipeCloud() {
+  if (!col) return null;
+  if (!online()) throw { code: 'network-offline' };
+  clearTimeout(flushTimer);
+  const snap = await withTimeout(getDocsFromServer(col), 20000);
+  const now = Date.now();
+  let batch = writeBatch(fs);
+  let n = 0;
+  let total = 0;
+  for (const d of snap.docs) {
+    const x = d.data();
+    batch.set(d.ref, { store: x.store, id: x.id, deleted: true, data: null, updatedAt: now, by: deviceId, byName: getDeviceName() });
+    n += 1;
+    total += 1;
+    if (n >= 400) {
+      await withTimeout(batch.commit(), 20000);
+      batch = writeBatch(fs);
+      n = 0;
+    }
+  }
+  if (n) await withTimeout(batch.commit(), 20000);
+  return total;
 }

@@ -362,3 +362,5 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; paddi
 .due-card.three .due-col > span { font-size: .78rem; }
 .due-card.three .due-amount { font-size: 1.15rem; }
 .due-card.three .due-amount { white-space: nowrap; font-size: 1.02rem; }
+
+.danger-zone { border-color: #e3a5a5; }

@@ -150,6 +150,16 @@ export async function replaceAll({ settings, readings, payments, adjustments }) 
   emit();
 }
 
+/** مسح كل البيانات المحلية (بما فيها الصندوق الصادر) دون تسجيل أي حذف للسحابة */
+export async function wipeLocal() {
+  const db = await openDB();
+  const names = [...STORES, 'settings', 'outbox'];
+  const tx = db.transaction(names, 'readwrite');
+  names.forEach((n) => tx.objectStore(n).clear());
+  await done(tx);
+  emit();
+}
+
 /* ---------- واجهة المزامنة ---------- */
 export async function getOutbox() {
   return getAll('outbox');

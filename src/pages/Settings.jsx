@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../ctx';
 import { getLock, saveLock } from '../lock';
-import { Field } from '../ui';
+import { Field, Modal } from '../ui';
+import * as sync from '../cloud/sync';
+import * as dbm from '../db';
 import { parseNum, D, isValidDate, todayStr, fmtDate } from '../calc';
 
 export default function Settings() {
@@ -70,6 +72,7 @@ export default function Settings() {
         <div className="form-actions"><button type="submit" className="btn primary" disabled={bad}>حفظ الإعدادات</button></div>
       </form>
       <LockSettings />
+      <ResetSection />
     </>
   );
 }
@@ -106,5 +109,64 @@ function LockSettings() {
       </Field>
       <div className="form-actions"><button type="submit" className="btn primary">حفظ القفل</button></div>
     </form>
+  );
+}
+
+const RESET_PW = '123456789';
+
+function ResetSection() {
+  const { cloud } = useApp();
+  const [open, setOpen] = useState(false);
+  const [pw, setPw] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const signed = ['syncing', 'synced', 'offline', 'error'].includes(cloud.phase);
+
+  const close = () => { if (!busy) { setOpen(false); setPw(''); setErr(''); } };
+
+  const run = async (e) => {
+    e.preventDefault();
+    if (pw !== RESET_PW) { setErr('كلمة السر غير صحيحة.'); return; }
+    setBusy(true);
+    setErr('');
+    try {
+      await sync.wipeCloud(); // يفشل قبل مسح أي شيء محليًا إذا تعذّر الاتصال
+      await dbm.wipeLocal();
+      try {
+        localStorage.removeItem('em-activity');
+      } catch { /* ignore */ }
+      window.location.hash = '#/home';
+      window.location.reload();
+    } catch (x) {
+      setErr(sync.arabicError(x));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="panel danger-zone">
+      <h3>تصفير التطبيق</h3>
+      <p className="note">يمسح كل القراءات والدفعات والتصحيحات والإعدادات من هذا الجهاز{signed ? '، ومن السحابة، ومن أجهزتك الأخرى عند مزامنتها' : ''}. لا يمكن التراجع.</p>
+      <button type="button" className="btn danger-solid" onClick={() => setOpen(true)}>تصفير التطبيق وقاعدة البيانات</button>
+      {open && (
+        <Modal
+          title="تأكيد التصفير"
+          onClose={close}
+          footer={
+            <>
+              <button type="button" className="btn ghost" onClick={close} disabled={busy}>إلغاء</button>
+              <button type="submit" form="reset-form" className="btn danger-solid" disabled={busy || !pw}>{busy ? 'جارٍ المسح…' : 'تصفير نهائي'}</button>
+            </>
+          }
+        >
+          <form id="reset-form" onSubmit={run} noValidate>
+            <p>سيُحذف كل شيء نهائيًا{signed ? ' من الهاتف ومن السحابة' : ' من هذا الجهاز (لا يوجد حساب سحابة مسجَّل الدخول)'}. أدخل كلمة السر للمتابعة.</p>
+            <Field label="كلمة السر" error={err}>
+              <input type="password" dir="ltr" autoComplete="off" value={pw} onChange={(e) => { setPw(e.target.value); setErr(''); }} autoFocus />
+            </Field>
+          </form>
+        </Modal>
+      )}
+    </section>
   );
 }

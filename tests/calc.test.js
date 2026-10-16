@@ -217,3 +217,17 @@ describe('حالات إضافية', () => {
     expect(validateBackup(bad).ok).toBe(false);
   });
 });
+
+describe('تصفير البيانات المحلية', () => {
+  it('wipeLocal يمسح كل المخازن والصندوق الصادر', async () => {
+    await db.addRec('readings', { date: '2026-01-01', reading: '10', price: '0.5', kind: 'normal' });
+    await db.addRec('payments', { date: '2026-01-02', amount: '5', method: 'x' });
+    await db.saveSettings({ ...db.DEFAULT_SETTINGS, price: '0.7' });
+    expect((await db.getOutbox()).length).toBeGreaterThan(0);
+    await db.wipeLocal();
+    expect(await db.getAll('readings')).toHaveLength(0);
+    expect(await db.getAll('payments')).toHaveLength(0);
+    expect(await db.getOutbox()).toHaveLength(0);
+    expect((await db.getSettings()).price).toBe(db.DEFAULT_SETTINGS.price);
+  });
+});
